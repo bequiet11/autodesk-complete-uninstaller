@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v3.1
+title Autodesk Universal Uninstaller v3.2
 color 0F
 
 net session >nul 2>&1
@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 set "LOGDIR=%USERPROFILE%\Desktop\Autodesk_Uninstaller"
 mkdir "!LOGDIR!" 2>nul
 set "LOGFILE=!LOGDIR!\uninstall_log.txt"
-echo Autodesk Universal Uninstaller v3.1 Log - %date% %time% > "!LOGFILE!"
+echo Autodesk Universal Uninstaller v3.2 Log - %date% %time% > "!LOGFILE!"
 
 set PROD_COUNT=0
 
@@ -28,7 +28,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  ========================================================
-echo    AUTODESK UNIVERSAL UNINSTALLER v3.1
+echo    AUTODESK UNIVERSAL UNINSTALLER v3.2
 echo    Supports all versions: 2015-2026+
 echo    Compatible with Windows 10 and Windows 11
 echo  ========================================================
@@ -537,13 +537,16 @@ for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdenti
 echo  done.
 echo.
 
-REM --- Phase C: Uninstall in dependency order ---
+REM --- Phase C: Uninstall in dependency order (multi-pass) ---
 echo  [C] Uninstalling !PROD_COUNT! products in dependency order...
+echo      Multi-pass: retries until all removed or stuck.
 echo.
 set UNINST_OK=0
 set UNINST_FAIL=0
 
-REM Pass through priorities 1,3,4,5,6,7,8
+REM === PASS 1: Priority-ordered uninstall ===
+echo      === Pass 1 of 4: Dependency-ordered removal ===
+echo.
 for %%P in (1 3 4 5 6 7 8) do (
     set "PASS_LABEL=Unknown"
     if %%P equ 1 set "PASS_LABEL=Add-ins, plugins, enablers"
@@ -558,7 +561,7 @@ for %%P in (1 3 4 5 6 7 8) do (
         if "!P_PRIO_%%i!"=="%%P" set PASS_HAS=1
     )
     if !PASS_HAS! equ 1 (
-        echo      --- Pass %%P: !PASS_LABEL! ---
+        echo      --- Priority %%P: !PASS_LABEL! ---
         for /l %%i in (1,1,!PROD_COUNT!) do (
             if "!P_PRIO_%%i!"=="%%P" (
                 set "PNAME=!P_NAME_%%i!"
@@ -633,8 +636,167 @@ for %%P in (1 3 4 5 6 7 8) do (
     )
 )
 echo.
-echo      !UNINST_OK! uninstalled, !UNINST_FAIL! skipped.
-echo  PHASE C: !UNINST_OK! ok !UNINST_FAIL! fail >> "!LOGFILE!"
+echo      Pass 1 result: !UNINST_OK! uninstalled, !UNINST_FAIL! failed.
+echo  PHASE C PASS 1: !UNINST_OK! ok !UNINST_FAIL! fail >> "!LOGFILE!"
+
+REM === MULTI-PASS RETRY: Rescan and retry up to 3 more times ===
+set RETRY_NUM=1
+set RETRY_MAX=3
+set PREV_REMAIN=999999
+
+:fc_retry_check
+REM Quick-count remaining Autodesk products in registry
+set REMAIN=0
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do set /a REMAIN+=1
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do set /a REMAIN+=1
+
+REM Check if done
+if !REMAIN! equ 0 (
+    echo.
+    echo      All Autodesk products removed after pass 1 + !RETRY_NUM! retries.
+    goto :fc_multipass_done
+)
+
+REM Check if retries exhausted
+if !RETRY_NUM! gtr !RETRY_MAX! (
+    echo.
+    echo      Max retries reached. !REMAIN! products still registered.
+    echo      These may need a reboot or manual removal.
+    goto :fc_multipass_done
+)
+
+REM Check if stuck (no progress since last pass)
+if !REMAIN! geq !PREV_REMAIN! (
+    if !RETRY_NUM! gtr 1 (
+        echo.
+        echo      No progress since last retry. !REMAIN! products stuck.
+        echo      Reboot and run again, or use Deep Clean.
+        goto :fc_multipass_done
+    )
+)
+set PREV_REMAIN=!REMAIN!
+
+echo.
+echo      !REMAIN! products still registered. Waiting 5 seconds...
+timeout /t 5 >nul
+set /a PASS_NUM=RETRY_NUM+1
+echo      === Pass !PASS_NUM! of 4: Retry uninstall ===
+echo  PHASE C PASS !PASS_NUM!: !REMAIN! remaining >> "!LOGFILE!"
+
+REM Rescan and attempt each remaining product
+set RETRY_OK=0
+set RETRY_IDX=0
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "R_KEY=%%k"
+    set "R_DN="
+    set "R_US="
+    set "R_PUB="
+    for /f "tokens=2,*" %%a in ('reg query "!R_KEY!" /v "DisplayName" 2^>nul ^| findstr /i "DisplayName"') do set "R_DN=%%b"
+    for /f "tokens=2,*" %%a in ('reg query "!R_KEY!" /v "Publisher" 2^>nul ^| findstr /i "Publisher"') do set "R_PUB=%%b"
+    if defined R_PUB (
+        echo "!R_PUB!" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 (
+            if defined R_DN (
+                for /f "tokens=2,*" %%a in ('reg query "!R_KEY!" /v "UninstallString" 2^>nul ^| findstr /i "UninstallString"') do set "R_US=%%b"
+                set /a RETRY_IDX+=1
+                <nul set /p "=      [!RETRY_IDX!] !R_DN:~0,45!"
+                if defined R_US (
+                    echo "!R_US!" | findstr /i "Installer.exe AdskUninstallHelper" >nul 2>&1
+                    if !errorlevel! equ 0 (
+                        set "R_CMD=!R_US!"
+                        echo "!R_CMD!" | findstr /i "\-q" >nul 2>&1
+                        if !errorlevel! neq 0 set "R_CMD=!R_CMD! -q"
+                        <nul set /p "=..."
+                        start /wait "" cmd /c "!R_CMD!" >nul 2>&1
+                        if !errorlevel! equ 0 (
+                            echo  OK
+                            set /a RETRY_OK+=1
+                        )
+                        if !errorlevel! neq 0 echo  exit:!errorlevel!
+                    )
+                    echo "!R_US!" | findstr /i "Installer.exe AdskUninstallHelper" >nul 2>&1
+                    if !errorlevel! neq 0 (
+                        echo "!R_US!" | findstr /i "MsiExec" >nul 2>&1
+                        if !errorlevel! equ 0 (
+                            set "R_GUID="
+                            for /f "delims={} tokens=2" %%g in ("!R_US!") do set "R_GUID=%%g"
+                            if defined R_GUID (
+                                <nul set /p "=..."
+                                msiexec /x "{!R_GUID!}" /qn /norestart >nul 2>&1
+                                if !errorlevel! equ 0 (
+                                    echo  OK
+                                    set /a RETRY_OK+=1
+                                )
+                                if !errorlevel! neq 0 echo  MSI:!errorlevel!
+                            )
+                            if not defined R_GUID echo  [no GUID]
+                        )
+                        echo "!R_US!" | findstr /i "MsiExec" >nul 2>&1
+                        if !errorlevel! neq 0 (
+                            <nul set /p "=..."
+                            start /wait "" cmd /c "!R_US!" /S /silent /quiet >nul 2>&1
+                            echo  OK
+                            set /a RETRY_OK+=1
+                        )
+                    )
+                )
+                if not defined R_US echo  [no uninstaller]
+            )
+        )
+    )
+)
+REM Also check WOW6432Node for 32-bit leftovers
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "R_KEY=%%k"
+    set "R_DN="
+    set "R_US="
+    set "R_PUB="
+    for /f "tokens=2,*" %%a in ('reg query "!R_KEY!" /v "DisplayName" 2^>nul ^| findstr /i "DisplayName"') do set "R_DN=%%b"
+    for /f "tokens=2,*" %%a in ('reg query "!R_KEY!" /v "Publisher" 2^>nul ^| findstr /i "Publisher"') do set "R_PUB=%%b"
+    if defined R_PUB (
+        echo "!R_PUB!" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 (
+            if defined R_DN (
+                for /f "tokens=2,*" %%a in ('reg query "!R_KEY!" /v "UninstallString" 2^>nul ^| findstr /i "UninstallString"') do set "R_US=%%b"
+                set /a RETRY_IDX+=1
+                <nul set /p "=      [!RETRY_IDX!] !R_DN:~0,45!"
+                if defined R_US (
+                    echo "!R_US!" | findstr /i "MsiExec" >nul 2>&1
+                    if !errorlevel! equ 0 (
+                        set "R_GUID="
+                        for /f "delims={} tokens=2" %%g in ("!R_US!") do set "R_GUID=%%g"
+                        if defined R_GUID (
+                            <nul set /p "=..."
+                            msiexec /x "{!R_GUID!}" /qn /norestart >nul 2>&1
+                            if !errorlevel! equ 0 (
+                                echo  OK
+                                set /a RETRY_OK+=1
+                            )
+                            if !errorlevel! neq 0 echo  MSI:!errorlevel!
+                        )
+                    )
+                    echo "!R_US!" | findstr /i "MsiExec" >nul 2>&1
+                    if !errorlevel! neq 0 (
+                        <nul set /p "=..."
+                        start /wait "" cmd /c "!R_US!" /S /silent /quiet >nul 2>&1
+                        echo  OK
+                        set /a RETRY_OK+=1
+                    )
+                )
+                if not defined R_US echo  [no uninstaller]
+            )
+        )
+    )
+)
+echo      Retry pass: !RETRY_OK! removed this round.
+set /a UNINST_OK+=RETRY_OK
+set /a RETRY_NUM+=1
+goto :fc_retry_check
+
+:fc_multipass_done
+echo.
+echo      TOTAL: !UNINST_OK! uninstalled across all passes.
+echo  PHASE C TOTAL: !UNINST_OK! ok >> "!LOGFILE!"
 echo.
 
 REM --- Phase D: Shared components ---
