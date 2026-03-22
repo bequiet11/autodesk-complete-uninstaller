@@ -23,6 +23,9 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 - **Final verification scan** confirms clean state
 - **Single `.bat` file** — no dependencies, no installation, no PowerShell execution policy issues
 
+<img width="663" height="451" alt="image" src="https://github.com/user-attachments/assets/fd820688-f77c-40fd-9403-0d4ee26f914b" />
+
+
 ---
 
 ## Compatibility
