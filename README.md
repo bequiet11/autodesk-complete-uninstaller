@@ -42,7 +42,7 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 ## Quick Start
 
-1. **Download** `autodesk_universal_uninstaller.bat`
+1. **Download** `autodesk_complete_uninstaller.bat`
 2. **Right-click** → **Run as administrator**
 3. Choose **[1] Scan** to see what's installed
 4. Choose **[3] Full Uninstall + Deep Clean** to remove everything
