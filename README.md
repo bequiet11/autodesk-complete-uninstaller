@@ -27,6 +27,9 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 <img width="1141" height="858" alt="image" src="https://github.com/user-attachments/assets/03544ac5-920f-4ba6-bcf3-97845a495ce1" />
 
+<img width="601" height="494" alt="image" src="https://github.com/user-attachments/assets/fbbeb783-b0fa-49b2-b0e0-282488711c97" />
+
+
 
 
 ---
