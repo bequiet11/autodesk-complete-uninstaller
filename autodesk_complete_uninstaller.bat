@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v3.2
+title Autodesk Universal Uninstaller v3.3
 color 0F
 
 net session >nul 2>&1
@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 set "LOGDIR=%USERPROFILE%\Desktop\Autodesk_Uninstaller"
 mkdir "!LOGDIR!" 2>nul
 set "LOGFILE=!LOGDIR!\uninstall_log.txt"
-echo Autodesk Universal Uninstaller v3.2 Log - %date% %time% > "!LOGFILE!"
+echo Autodesk Universal Uninstaller v3.3 Log - %date% %time% > "!LOGFILE!"
 
 set PROD_COUNT=0
 
@@ -28,7 +28,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  ========================================================
-echo    AUTODESK UNIVERSAL UNINSTALLER v3.2
+echo    AUTODESK UNIVERSAL UNINSTALLER v3.3
 echo    Supports all versions: 2015-2026+
 echo    Compatible with Windows 10 and Windows 11
 echo  ========================================================
@@ -70,46 +70,42 @@ echo  NOTE: Windows limits restore points to one per 24 hours.
 echo        This script will temporarily bypass that limit.
 echo.
 set /p "RP_CONF=  Create restore point now? [Y/N]: "
-if /i not "!RP_CONF!"=="Y" (
-    goto :main_menu
-)
+if /i not "!RP_CONF!"=="Y" goto :main_menu
 
 echo.
 REM Check if System Restore is enabled on C:
 <nul set /p "=  Checking if System Restore is enabled..."
-reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "RPSessionInterval" >nul 2>&1
 set "SR_DISABLED=0"
 reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "DisableSR" >nul 2>&1
+if !errorlevel! neq 0 goto :cr_enabled
+for /f "tokens=3" %%v in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "DisableSR" 2^>nul ^| findstr "DisableSR"') do (
+    if "%%v"=="0x1" set "SR_DISABLED=1"
+)
+if !SR_DISABLED! equ 0 goto :cr_enabled
+
+echo  DISABLED
+echo.
+echo  System Restore is disabled on this machine.
+echo  To enable it: System Properties - System Protection -
+echo  Configure - Turn on system protection.
+echo.
+set /p "SR_ENABLE=  Try to enable it now? [Y/N]: "
+if /i not "!SR_ENABLE!"=="Y" (
+    pause
+    goto :main_menu
+)
+<nul set /p "=  Enabling System Restore on C:..."
+powershell -Command "Enable-ComputerRestore -Drive 'C:\'" >nul 2>&1
 if !errorlevel! equ 0 (
-    for /f "tokens=3" %%v in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v "DisableSR" 2^>nul ^| findstr "DisableSR"') do (
-        if "%%v"=="0x1" set "SR_DISABLED=1"
-    )
+    echo  OK
 )
-if !SR_DISABLED! equ 1 (
-    echo  DISABLED
-    echo.
-    echo  System Restore is disabled on this machine.
-    echo  To enable it: System Properties - System Protection -
-    echo  Configure - Turn on system protection.
-    echo.
-    set /p "SR_ENABLE=  Try to enable it now? [Y/N]: "
-    if /i "!SR_ENABLE!"=="Y" (
-        <nul set /p "=  Enabling System Restore on C:..."
-        powershell -Command "Enable-ComputerRestore -Drive 'C:\'" >nul 2>&1
-        if !errorlevel! equ 0 (
-            echo  OK
-        )
-        if !errorlevel! neq 0 (
-            echo  FAILED - enable manually via System Properties.
-            pause
-            goto :main_menu
-        )
-    )
-    if /i not "!SR_ENABLE!"=="Y" (
-        pause
-        goto :main_menu
-    )
+if !errorlevel! neq 0 (
+    echo  FAILED - enable manually via System Properties.
+    pause
+    goto :main_menu
 )
+
+:cr_enabled
 if !SR_DISABLED! equ 0 echo  OK
 
 REM Bypass 24-hour limit temporarily
@@ -117,43 +113,19 @@ REM Bypass 24-hour limit temporarily
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
 echo  OK
 
-REM Create the restore point using wmic (works on Win10+Win11)
+REM Create the restore point using wmic
 echo  Creating restore point...
 <nul set /p "=  Method 1: WMIC..."
-wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Uninstall %date% %time%", 100, 12 >nul 2>&1
-set "RP_ERR=!errorlevel!"
+wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Uninstall", 100, 12 >nul 2>&1
+if !errorlevel! equ 0 goto :cr_wmic_ok
 
-if !RP_ERR! equ 0 (
-    echo  SUCCESS
-    echo  RESTORE POINT: Created %date% %time% >> "!LOGFILE!"
-    echo.
-    echo  Restore point created successfully.
-    echo  Name: "Pre-Autodesk Uninstall %date%"
-    echo.
-    echo  To restore later: Start - type "Create a restore point"
-    echo  - System Restore - choose this restore point.
-    echo.
-    pause
-    goto :main_menu
-)
-
-REM Fallback to PowerShell if WMIC fails (newer Win11 builds)
-echo  code:!RP_ERR!
+REM Fallback to PowerShell if WMIC fails
+echo  failed.
 <nul set /p "=  Method 2: PowerShell..."
 powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Uninstall' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
-set "RP_ERR2=!errorlevel!"
+if !errorlevel! equ 0 goto :cr_ps_ok
 
-if !RP_ERR2! equ 0 (
-    echo  SUCCESS
-    echo  RESTORE POINT: Created via PS %date% %time% >> "!LOGFILE!"
-    echo.
-    echo  Restore point created successfully.
-    echo.
-    pause
-    goto :main_menu
-)
-
-echo  FAILED code:!RP_ERR2!
+echo  FAILED
 echo.
 echo  Could not create restore point. Possible causes:
 echo  - System Restore is disabled
@@ -162,6 +134,24 @@ echo  - A restore point was created in the last 24 hours
 echo  - Drive C: protection is off
 echo.
 echo  You can still continue with uninstallation.
+echo.
+pause
+goto :main_menu
+
+:cr_wmic_ok
+echo  SUCCESS
+echo  RESTORE POINT: Created >> "!LOGFILE!"
+echo.
+echo  Restore point created successfully.
+echo.
+pause
+goto :main_menu
+
+:cr_ps_ok
+echo  SUCCESS
+echo  RESTORE POINT: Created via PowerShell >> "!LOGFILE!"
+echo.
+echo  Restore point created successfully.
 echo.
 pause
 goto :main_menu
@@ -386,57 +376,62 @@ for %%n in (!SEL!) do (
         echo   [!PTYPE!] !PNAME!
         echo  --------------------------------------------------------
         set /p "CONF=  Proceed? [Y/N]: "
-        if /i "!CONF!"=="Y" (
+        set "_HANDLED=0"
+        if /i not "!CONF!"=="Y" set "_HANDLED=1"
+
+        if !_HANDLED! equ 0 if not defined PUNINST (
+            echo  [ERROR] No UninstallString. Try Control Panel.
+            set "_HANDLED=1"
+        )
+
+        if !_HANDLED! equ 0 if "!PTYPE!"=="ODIS" (
             echo  UNINSTALL: !PNAME! >> "!LOGFILE!"
-            if not defined PUNINST (
-                echo  [ERROR] No UninstallString. Try Control Panel.
-                goto :sel_done_%%n
-            )
-            if "!PTYPE!"=="ODIS" goto :sel_odis_%%n
-            goto :sel_msi_%%n
+            <nul set /p "=  [ODIS] Running uninstaller..."
+            set "UCMD=!PUNINST!"
+            echo "!UCMD!" | findstr /i "\-q" >nul 2>&1
+            if !errorlevel! neq 0 set "UCMD=!UCMD! -q"
+            start /wait "" cmd /c "!UCMD!" >nul 2>&1
+            set "UERR=!errorlevel!"
+            if !UERR! equ 0 echo  OK
+            if !UERR! neq 0 echo  exit:!UERR!
+            set "_HANDLED=1"
         )
-        goto :sel_done_%%n
 
-        :sel_odis_%%n
-        <nul set /p "=  [ODIS] Running uninstaller"
-        set "UCMD=!PUNINST!"
-        echo "!UCMD!" | findstr /i "\-q" >nul 2>&1
-        if !errorlevel! neq 0 set "UCMD=!UCMD! -q"
-        <nul set /p "=..."
-        start /wait "" cmd /c "!UCMD!" >nul 2>&1
-        set "UERR=!errorlevel!"
-        if !UERR! equ 0 echo  OK
-        if !UERR! neq 0 echo  exit:!UERR!
-        goto :sel_done_%%n
-
-        :sel_msi_%%n
-        echo "!PUNINST!" | findstr /i "MsiExec" >nul 2>&1
-        if !errorlevel! equ 0 (
-            set "GUID="
-            for /f "delims={} tokens=2" %%g in ("!PUNINST!") do set "GUID=%%g"
-            if defined GUID (
-                <nul set /p "=  [MSI] msiexec /x..."
-                msiexec /x "{!GUID!}" /qn /norestart
-                set "UERR=!errorlevel!"
-                if !UERR! equ 0 echo  OK
-                if !UERR! neq 0 (
-                    echo  code:!UERR! retrying...
-                    msiexec /x "{!GUID!}" /qb /norestart
+        if !_HANDLED! equ 0 (
+            echo  UNINSTALL: !PNAME! >> "!LOGFILE!"
+            echo "!PUNINST!" | findstr /i "MsiExec" >nul 2>&1
+            if !errorlevel! equ 0 (
+                set "GUID="
+                for /f "delims={} tokens=2" %%g in ("!PUNINST!") do set "GUID=%%g"
+                if defined GUID (
+                    <nul set /p "=  [MSI] msiexec /x..."
+                    msiexec /x "{!GUID!}" /qn /norestart
+                    set "UERR=!errorlevel!"
+                    if !UERR! equ 0 echo  OK
+                    if !UERR! neq 0 (
+                        echo  code:!UERR! retrying...
+                        msiexec /x "{!GUID!}" /qb /norestart
+                    )
+                    set "_HANDLED=1"
                 )
-                goto :sel_done_%%n
             )
         )
-        echo "!PUNINST!" | findstr /i "Setup.exe" >nul 2>&1
-        if !errorlevel! equ 0 (
-            <nul set /p "=  [LEGACY] Running Setup.exe..."
-            start /wait "" cmd /c "!PUNINST!" /q >nul 2>&1
-            echo  OK
-            goto :sel_done_%%n
+
+        if !_HANDLED! equ 0 (
+            echo "!PUNINST!" | findstr /i "Setup.exe" >nul 2>&1
+            if !errorlevel! equ 0 (
+                <nul set /p "=  [LEGACY] Running Setup.exe..."
+                start /wait "" cmd /c "!PUNINST!" /q >nul 2>&1
+                echo  OK
+                set "_HANDLED=1"
+            )
         )
-        <nul set /p "=  [GENERIC] Running..."
-        start /wait "" cmd /c "!PUNINST!" /S /silent /quiet >nul 2>&1
-        echo  OK
-        :sel_done_%%n
+
+        if !_HANDLED! equ 0 (
+            <nul set /p "=  [GENERIC] Running..."
+            start /wait "" cmd /c "!PUNINST!" /S /silent /quiet >nul 2>&1
+            echo  OK
+        )
         echo.
     )
 )
@@ -495,25 +490,24 @@ echo  === FULL CLEAN START === >> "!LOGFILE!"
 REM --- Phase A: Restore point ---
 echo  [A] System Restore Point
 set /p "RP_ASK=      Create restore point before proceeding? [Y/N]: "
-if /i "!RP_ASK!"=="Y" (
-    <nul set /p "=      Creating restore point..."
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
-    wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Full Clean %date%", 100, 12 >nul 2>&1
-    set "RP_ERR=!errorlevel!"
-    if !RP_ERR! equ 0 (
-        echo  OK
-    )
-    if !RP_ERR! neq 0 (
-        <nul set /p "= WMIC failed, trying PowerShell..."
-        powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Full Clean' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
-        if !errorlevel! equ 0 (
-            echo  OK
-        )
-        if !errorlevel! neq 0 (
-            echo  FAILED - continuing anyway.
-        )
-    )
+if /i not "!RP_ASK!"=="Y" goto :fc_phase_b
+
+<nul set /p "=      Creating restore point..."
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
+wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Full Clean", 100, 12 >nul 2>&1
+if !errorlevel! equ 0 (
+    echo  OK
+    goto :fc_phase_b
 )
+<nul set /p "= WMIC failed, trying PowerShell..."
+powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Full Clean' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo  OK
+    goto :fc_phase_b
+)
+echo  FAILED - continuing anyway.
+
+:fc_phase_b
 echo.
 
 REM --- Phase B: Stop everything ---
@@ -567,15 +561,16 @@ for %%P in (1 3 4 5 6 7 8) do (
                 set "PNAME=!P_NAME_%%i!"
                 set "PUNINST=!P_UNINST_%%i!"
                 set "PTYPE=!P_TYPE_%%i!"
+                set "_HANDLED=0"
                 <nul set /p "=      !PNAME:~0,50!"
 
                 if not defined PUNINST (
                     echo  [SKIP:no uninstaller]
                     set /a UNINST_FAIL+=1
-                    goto :fc_done_%%i
+                    set "_HANDLED=1"
                 )
 
-                if "!PTYPE!"=="ODIS" (
+                if !_HANDLED! equ 0 if "!PTYPE!"=="ODIS" (
                     set "UCMD=!PUNINST!"
                     echo "!UCMD!" | findstr /i "\-q" >nul 2>&1
                     if !errorlevel! neq 0 set "UCMD=!UCMD! -q"
@@ -590,47 +585,52 @@ for %%P in (1 3 4 5 6 7 8) do (
                         echo  exit:!UERR!
                         set /a UNINST_FAIL+=1
                     )
-                    goto :fc_done_%%i
+                    set "_HANDLED=1"
                 )
 
-                echo "!PUNINST!" | findstr /i "MsiExec" >nul 2>&1
-                if !errorlevel! equ 0 (
-                    set "GUID="
-                    for /f "delims={} tokens=2" %%g in ("!PUNINST!") do set "GUID=%%g"
-                    if defined GUID (
-                        <nul set /p "=..."
-                        msiexec /x "{!GUID!}" /qn /norestart >nul 2>&1
-                        set "UERR=!errorlevel!"
-                        if !UERR! equ 0 (
-                            echo  OK
-                            set /a UNINST_OK+=1
+                if !_HANDLED! equ 0 (
+                    echo "!PUNINST!" | findstr /i "MsiExec" >nul 2>&1
+                    if !errorlevel! equ 0 (
+                        set "GUID="
+                        for /f "delims={} tokens=2" %%g in ("!PUNINST!") do set "GUID=%%g"
+                        if defined GUID (
+                            <nul set /p "=..."
+                            msiexec /x "{!GUID!}" /qn /norestart >nul 2>&1
+                            set "UERR=!errorlevel!"
+                            if !UERR! equ 0 (
+                                echo  OK
+                                set /a UNINST_OK+=1
+                            )
+                            if !UERR! neq 0 (
+                                echo  MSI:!UERR!
+                                set /a UNINST_FAIL+=1
+                            )
                         )
-                        if !UERR! neq 0 (
-                            echo  MSI:!UERR!
+                        if not defined GUID (
+                            echo  [SKIP:no GUID]
                             set /a UNINST_FAIL+=1
                         )
+                        set "_HANDLED=1"
                     )
-                    if not defined GUID (
-                        echo  [SKIP:no GUID]
-                        set /a UNINST_FAIL+=1
-                    )
-                    goto :fc_done_%%i
                 )
 
-                echo "!PUNINST!" | findstr /i "Setup.exe" >nul 2>&1
-                if !errorlevel! equ 0 (
+                if !_HANDLED! equ 0 (
+                    echo "!PUNINST!" | findstr /i "Setup.exe" >nul 2>&1
+                    if !errorlevel! equ 0 (
+                        <nul set /p "=..."
+                        start /wait "" cmd /c "!PUNINST!" /q >nul 2>&1
+                        echo  OK
+                        set /a UNINST_OK+=1
+                        set "_HANDLED=1"
+                    )
+                )
+
+                if !_HANDLED! equ 0 (
                     <nul set /p "=..."
-                    start /wait "" cmd /c "!PUNINST!" /q >nul 2>&1
+                    start /wait "" cmd /c "!PUNINST!" /S /silent /quiet >nul 2>&1
                     echo  OK
                     set /a UNINST_OK+=1
-                    goto :fc_done_%%i
                 )
-
-                <nul set /p "=..."
-                start /wait "" cmd /c "!PUNINST!" /S /silent /quiet >nul 2>&1
-                echo  OK
-                set /a UNINST_OK+=1
-                :fc_done_%%i
             )
         )
     )
@@ -1035,21 +1035,23 @@ if /i not "!DC_CONF!"=="YES" (
 echo.
 REM Offer restore point
 set /p "DC_RP=  Create restore point first? [Y/N]: "
-if /i "!DC_RP!"=="Y" (
-    <nul set /p "=  Creating restore point..."
-    reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
-    wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Deep Clean %date%", 100, 12 >nul 2>&1
-    if !errorlevel! equ 0 (
-        echo  OK
-    )
-    if !errorlevel! neq 0 (
-        powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Deep Clean' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
-        if !errorlevel! equ 0 (
-            echo  OK via PowerShell
-        )
-        if !errorlevel! neq 0 echo  FAILED - continuing.
-    )
+if /i not "!DC_RP!"=="Y" goto :dc_after_rp
+
+<nul set /p "=  Creating restore point..."
+reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
+wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Deep Clean", 100, 12 >nul 2>&1
+if !errorlevel! equ 0 (
+    echo  OK
+    goto :dc_after_rp
 )
+powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Deep Clean' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
+if !errorlevel! equ 0 (
+    echo  OK via PowerShell
+    goto :dc_after_rp
+)
+echo  FAILED - continuing.
+
+:dc_after_rp
 
 echo.
 <nul set /p "=  Stopping services"
