@@ -16,6 +16,7 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
   3. Material Libraries (Medium Resolution → Base Resolution → Core — largest to smallest, per Autodesk docs)
   4. Desktop App, Single Sign-On
   5. Genuine Service (always last)
+- **Multi-pass** uninstall — automatically retries failed products up to 4 times with registry rescans between passes, resolving ODIS dependency chains that block single-pass removal
 - **Deep clean** removes all traces: folders, registry keys, Windows services, scheduled tasks, firewall rules, FLEXnet files, CLM/LGS license data, ADUT transition data, ODIS cache, environment variables
 - **Registry backup** before deletion — `.reg` export files saved to Desktop
 - **System Restore Point** creation (optional) with 24-hour limit bypass
@@ -81,7 +82,7 @@ The main option. Performs a complete removal in 10 phases:
 |-------|-------------|
 | A | Creates a System Restore Point (optional, asks Y/N) |
 | B | Stops all Autodesk services and kills running processes |
-| C | Uninstalls all products in dependency order (see above) |
+| C | Uninstalls all products in dependency order with multi-pass retry — rescans registry between passes, retries up to 4 times, stops when all removed or no progress |
 | D | Runs shared component uninstallers (Identity Manager, ODIS, AdskLicensing, AdskUninstallHelper) |
 | E | Deletes all Autodesk folders (10+ locations including the C:\Autodesk staging folder that can be 5–31+ GB) |
 | F | Cleans FLEXnet license files, CLM/LGS data, ADUT, ODIS download cache, LoginState.xml, temp files |
