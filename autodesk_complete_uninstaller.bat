@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v3.3
+title Autodesk Universal Uninstaller v3.4
 color 0F
 
 net session >nul 2>&1
@@ -17,7 +17,7 @@ if %errorlevel% neq 0 (
 set "LOGDIR=%USERPROFILE%\Desktop\Autodesk_Uninstaller"
 mkdir "!LOGDIR!" 2>nul
 set "LOGFILE=!LOGDIR!\uninstall_log.txt"
-echo Autodesk Universal Uninstaller v3.3 Log - %date% %time% > "!LOGFILE!"
+echo Autodesk Universal Uninstaller v3.4 Log - %date% %time% > "!LOGFILE!"
 
 set PROD_COUNT=0
 
@@ -28,7 +28,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  ========================================================
-echo    AUTODESK UNIVERSAL UNINSTALLER v3.3
+echo    AUTODESK UNIVERSAL UNINSTALLER v3.4
 echo    Supports all versions: 2015-2026+
 echo    Compatible with Windows 10 and Windows 11
 echo  ========================================================
@@ -524,7 +524,7 @@ net stop "FlexNet Licensing Service 64" >nul 2>&1
 net stop "Autodesk Genuine Service" >nul 2>&1
 echo  done.
 <nul set /p "=      Killing processes"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe) do (
+for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
@@ -801,22 +801,29 @@ echo.
 
 REM --- Phase D: Shared components ---
 echo  [D] Removing shared components...
+if exist "C:\Program Files (x86)\Autodesk\Autodesk Desktop App\removeAdAppMgr.exe" (
+    <nul set /p "=      Desktop App..."
+    rd /s /q "%ProgramData%\Autodesk\SDS" 2>nul
+    start /wait "" "C:\Program Files (x86)\Autodesk\Autodesk Desktop App\removeAdAppMgr.exe" --mode unattended
+    timeout /t 3 >nul
+    echo  OK
+)
 if exist "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe" (
     <nul set /p "=      Identity Manager..."
-    start /wait "" "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe"
+    start /wait "" "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe" --mode unattended
     timeout /t 3 >nul
     echo  OK
 )
 if exist "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" (
     del /f "C:\ProgramData\Autodesk\ODIS\AdODISInstaller.run.lock" >nul 2>&1
     <nul set /p "=      RemoveODIS..."
-    start /wait "" "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe"
+    start /wait "" "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" --mode unattended
     timeout /t 3 >nul
     echo  OK
 )
 if exist "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" (
     <nul set /p "=      AdskLicensing..."
-    start /wait "" "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe"
+    start /wait "" "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" --mode unattended
     timeout /t 3 >nul
     echo  OK
 )
@@ -1067,7 +1074,7 @@ net stop "FlexNet Licensing Service 64" >nul 2>&1
 net stop "Autodesk Genuine Service" >nul 2>&1
 echo  done.
 <nul set /p "=  Killing processes"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe) do (
+for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
@@ -1075,20 +1082,26 @@ echo  done.
 
 echo.
 echo  Running component uninstallers...
+if exist "C:\Program Files (x86)\Autodesk\Autodesk Desktop App\removeAdAppMgr.exe" (
+    <nul set /p "=    Desktop App..."
+    rd /s /q "%ProgramData%\Autodesk\SDS" 2>nul
+    start /wait "" "C:\Program Files (x86)\Autodesk\Autodesk Desktop App\removeAdAppMgr.exe" --mode unattended
+    echo  OK
+)
 if exist "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe" (
     <nul set /p "=    Identity Manager..."
-    start /wait "" "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe"
+    start /wait "" "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe" --mode unattended
     echo  OK
 )
 if exist "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" (
     del /f "C:\ProgramData\Autodesk\ODIS\AdODISInstaller.run.lock" >nul 2>&1
     <nul set /p "=    RemoveODIS..."
-    start /wait "" "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe"
+    start /wait "" "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" --mode unattended
     echo  OK
 )
 if exist "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" (
     <nul set /p "=    AdskLicensing..."
-    start /wait "" "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe"
+    start /wait "" "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" --mode unattended
     echo  OK
 )
 if exist "C:\ProgramData\Autodesk\Uninstallers" (
