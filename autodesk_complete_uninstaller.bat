@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v3.7
+title Autodesk Universal Uninstaller v4.4
 color 0F
 
 net session >nul 2>&1
@@ -21,7 +21,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v3.7 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v4.4 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -88,7 +88,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  ========================================================
-echo    AUTODESK UNIVERSAL UNINSTALLER v3.7
+echo    AUTODESK UNIVERSAL UNINSTALLER v4.4
 echo    Supports all versions: 2015-2026+
 echo    Compatible with Windows 10 and Windows 11
 echo  ========================================================
@@ -99,19 +99,21 @@ echo  [3]  Full Uninstall + Deep Clean ALL Products
 echo  [4]  Deep Clean Only (remnants, no product uninstall)
 echo  [5]  Final Verification
 echo  [6]  Create System Restore Point
-echo  [7]  Exit
+echo  [7]  Search for ALL Autodesk remnants
+echo  [8]  Exit
 echo.
 echo  Log: !LOGDIR!\uninstall_log.txt
 echo  Diagnostics: !LOGDIR!\diagnostics.log
 echo.
-set /p "MC=  Enter choice [1-7]: "
+set /p "MC=  Enter choice [1-8]: "
 if "!MC!"=="1" goto :scan_products
 if "!MC!"=="2" goto :uninstall_selected
 if "!MC!"=="3" goto :full_clean
 if "!MC!"=="4" goto :deep_clean
 if "!MC!"=="5" goto :run_verify
 if "!MC!"=="6" goto :create_restore
-if "!MC!"=="7" exit /b 0
+if "!MC!"=="7" goto :search_remnants
+if "!MC!"=="8" exit /b 0
 goto :main_menu
 
 REM ============================================================
@@ -597,11 +599,15 @@ net stop "FlexNet Licensing Service 64" >nul 2>&1
 net stop "Autodesk Genuine Service" >nul 2>&1
 echo  done.
 <nul set /p "=      Killing processes"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe) do (
+for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe AdODIS.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
+REM Wildcard: kill ANY process running from Autodesk paths
+wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
 echo  done.
+timeout /t 2 >nul
 echo.
 
 REM --- Phase C: Uninstall in dependency order (multi-pass) ---
@@ -672,13 +678,19 @@ for %%P in (1 3 4 5 6 7 8) do (
                     if !ODIS_META_OK! equ 1 (
                         <nul set /p "=..."
                         del /f "!LOGDIR!\odis_out.tmp" >nul 2>&1
-                        start /wait "" cmd /c "!UCMD!" >"!LOGDIR!\odis_out.tmp" 2>&1
+                        cmd /c "!UCMD!" >"!LOGDIR!\odis_out.tmp" 2>&1
                         set "UERR=!errorlevel!"
                         echo   EXIT: !UERR! >> "!LOGFILE!"
                         echo   DIAG: ODIS exit=!UERR! >> "!DIAGFILE!"
                         if !UERR! neq 0 (
-                            echo   ODIS OUTPUT: >> "!DIAGFILE!"
+                            echo   ODIS STDOUT+STDERR: >> "!DIAGFILE!"
                             type "!LOGDIR!\odis_out.tmp" >> "!DIAGFILE!" 2>nul
+                            REM Copy ODIS own log files to diagnostics dir
+                            if exist "C:\ProgramData\Autodesk\ODIS\Logs" (
+                                echo   ODIS LOGS FOUND: >> "!DIAGFILE!"
+                                dir /b /o-d "C:\ProgramData\Autodesk\ODIS\Logs\*.log" >> "!DIAGFILE!" 2>nul
+                                xcopy "C:\ProgramData\Autodesk\ODIS\Logs\*.log" "!LOGDIR!\odis_logs\" /y /q >nul 2>&1
+                            )
                         )
                         del /f "!LOGDIR!\odis_out.tmp" >nul 2>&1
                         if !UERR! equ 0 (
@@ -843,7 +855,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVer
                             if !errorlevel! neq 0 set "R_CMD=!R_CMD! -q"
                             <nul set /p "=..."
                             del /f "!LOGDIR!\odis_out.tmp" >nul 2>&1
-                            start /wait "" cmd /c "!R_CMD!" >"!LOGDIR!\odis_out.tmp" 2>&1
+                            cmd /c "!R_CMD!" >"!LOGDIR!\odis_out.tmp" 2>&1
                             set "RERR=!errorlevel!"
                             if !RERR! equ 0 (
                                 echo  OK
@@ -1054,6 +1066,39 @@ echo  PHASE D END %time% >> "!DIAGFILE!"
 echo.
 
 REM --- Phase E: Delete folders ---
+REM Kill any processes that Phase C/D may have spawned
+<nul set /p "=  [E] Killing residual processes"
+for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe) do (
+    taskkill /f /im "%%p" >nul 2>&1
+    if !errorlevel! equ 0 <nul set /p "=."
+)
+wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+REM Stop Windows Search to release index handles on Autodesk folders
+net stop WSearch >nul 2>&1
+REM Unregister shell extensions that explorer.exe holds loaded
+set "EXPLORER_KILLED=0"
+for %%x in (
+    "C:\Program Files\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
+    "C:\Program Files\Common Files\Autodesk Shared\DwfShellEx\DwfShellExtension.dll"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared\DwfShellEx\DwfShellExtension.dll"
+) do (
+    if exist %%x (
+        regsvr32 /u /s %%x >nul 2>&1
+        <nul set /p "=."
+        set "EXPLORER_KILLED=1"
+    )
+)
+if !EXPLORER_KILLED! equ 1 (
+    <nul set /p "= restarting explorer"
+    taskkill /f /im explorer.exe >nul 2>&1
+    timeout /t 2 >nul
+    start "" explorer.exe
+    timeout /t 2 >nul
+)
+echo  done.
+timeout /t 3 >nul
 echo  [E] Deleting Autodesk folders...
 echo  PHASE E START %time% >> "!DIAGFILE!"
 set DOK=0
@@ -1062,8 +1107,10 @@ set "LOCKED_LIST="
 for %%d in (
     "C:\Program Files\Autodesk"
     "C:\Program Files\Common Files\Autodesk Shared"
+    "C:\Program Files\Common Files\Autodesk"
     "C:\Program Files (x86)\Autodesk"
     "C:\Program Files (x86)\Common Files\Autodesk Shared"
+    "C:\Program Files (x86)\Common Files\Autodesk"
     "C:\ProgramData\Autodesk"
     "C:\Users\Public\Documents\Autodesk"
     "C:\Autodesk"
@@ -1111,6 +1158,19 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         )
     )
 )
+REM SYSTEM profile and other user profiles
+if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+    <nul set /p "=      SYSTEM profile Autodesk..."
+    rd /s /q "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" 2>nul
+    if not exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+        echo  deleted.
+        set /a DOK+=1
+    )
+    if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+        echo  LOCKED.
+        set /a DFL+=1
+    )
+)
 echo      !DOK! deleted, !DFL! locked.
 REM If folders are locked, create a reboot cleanup script
 if !DFL! gtr 0 (
@@ -1120,8 +1180,10 @@ if !DFL! gtr 0 (
     for %%d in (
         "C:\Program Files\Autodesk"
         "C:\Program Files\Common Files\Autodesk Shared"
+        "C:\Program Files\Common Files\Autodesk"
         "C:\Program Files (x86)\Autodesk"
         "C:\Program Files (x86)\Common Files\Autodesk Shared"
+        "C:\Program Files (x86)\Common Files\Autodesk"
         "C:\ProgramData\Autodesk"
         "C:\Users\Public\Documents\Autodesk"
         "C:\Autodesk"
@@ -1307,6 +1369,64 @@ if !errorlevel! equ 0 (
 echo      !RDEL! registry items removed. Backups in !LOGDIR!
 echo.
 
+REM --- Phase H2: User class registry cleanup ---
+echo  [H2] Cleaning user file associations and COM entries...
+set CDEL=0
+REM Delete known Autodesk-named class keys from HKCU - multiple passes to catch subkeys
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    echo "%%k" | findstr /i "EncapsulatedPostscript ErrorLogFile ExportedToolPalettes Ghostscript WindowsMetafile MuiCache" >nul 2>&1
+    if !errorlevel! neq 0 (
+        reg delete "%%k" /f >nul 2>&1
+        set /a CDEL+=1
+    )
+)
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile) do (
+    reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "HKCU\SOFTWARE\Classes\%%n" /f >nul 2>&1
+        set /a CDEL+=1
+    )
+)
+reg delete "HKCU\SOFTWARE\Classes\dwgviewr.9128.409" /f >nul 2>&1
+if !errorlevel! equ 0 set /a CDEL+=1
+reg delete "HKCU\SOFTWARE\Classes\.dgn" /f >nul 2>&1
+if !errorlevel! equ 0 set /a CDEL+=1
+REM Delete CLSIDs that reference Autodesk paths
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+REM Clean MuiCache Autodesk entries
+for /f "tokens=1,*" %%a in ('reg query "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" 2^>nul ^| findstr /i "Autodesk"') do (
+    reg delete "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%%a" /f >nul 2>&1
+    set /a CDEL+=1
+)
+REM Clean shell extensions from HKLM
+for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s 2^>nul ^| findstr /i "Autodesk"') do (
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /v "%%a" /f >nul 2>&1
+    set /a CDEL+=1
+)
+REM Second pass: catch any remaining DWGTrueView/AutoCAD keys
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+echo      !CDEL! user registry entries cleaned.
+if !CDEL! gtr 0 echo  PHASE H2: !CDEL! user-class entries >> "!LOGFILE!"
+echo.
+
 REM --- Phase I: Genuine Service (LAST) ---
 <nul set /p "=  [I] Removing Genuine Service..."
 sc stop "Autodesk Genuine Service" >nul 2>&1
@@ -1380,11 +1500,15 @@ net stop "FlexNet Licensing Service 64" >nul 2>&1
 net stop "Autodesk Genuine Service" >nul 2>&1
 echo  done.
 <nul set /p "=  Killing processes"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe) do (
+for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe AdODIS.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
+wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+net stop WSearch >nul 2>&1
 echo  done.
+timeout /t 2 >nul
 
 echo.
 echo  Running component uninstallers...
@@ -1449,12 +1573,43 @@ for /d %%d in ("%temp%\*") do rd /s /q "%%d" 2>nul
 echo  done.
 
 echo.
+REM Kill again before folder deletion - component uninstallers may have spawned processes
+<nul set /p "=  Killing residual processes"
+for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe Installer.exe AdODIS.exe) do (
+    taskkill /f /im "%%p" >nul 2>&1
+)
+wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+net stop WSearch >nul 2>&1
+REM Unregister shell extensions loaded by explorer.exe
+set "DC_EXPLORER=0"
+for %%x in (
+    "C:\Program Files\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
+    "C:\Program Files\Common Files\Autodesk Shared\DwfShellEx\DwfShellExtension.dll"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared\DwfShellEx\DwfShellExtension.dll"
+) do (
+    if exist %%x (
+        regsvr32 /u /s %%x >nul 2>&1
+        set "DC_EXPLORER=1"
+    )
+)
+if !DC_EXPLORER! equ 1 (
+    <nul set /p "= restarting explorer"
+    taskkill /f /im explorer.exe >nul 2>&1
+    timeout /t 2 >nul
+    start "" explorer.exe
+    timeout /t 2 >nul
+)
+echo  done.
+timeout /t 3 >nul
 echo  Deleting folders...
 for %%d in (
     "C:\Program Files\Autodesk"
     "C:\Program Files\Common Files\Autodesk Shared"
+    "C:\Program Files\Common Files\Autodesk"
     "C:\Program Files (x86)\Autodesk"
     "C:\Program Files (x86)\Common Files\Autodesk Shared"
+    "C:\Program Files (x86)\Common Files\Autodesk"
     "C:\ProgramData\Autodesk"
     "C:\Users\Public\Documents\Autodesk"
     "C:\Autodesk"
@@ -1484,6 +1639,12 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         if not exist "%%~d" echo  deleted.
         if exist "%%~d" echo  LOCKED.
     )
+)
+if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+    <nul set /p "=    SYSTEM profile Autodesk..."
+    rd /s /q "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" 2>nul
+    if not exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" echo  deleted.
+    if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" echo  LOCKED.
 )
 
 echo.
@@ -1596,11 +1757,247 @@ rd /s /q "%LOCALAPPDATA%\Programs\Autodesk\Genuine Service" 2>nul
 echo  done.
 
 echo.
+echo  Cleaning user file associations...
+set DC_CDEL=0
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    echo "%%k" | findstr /i "EncapsulatedPostscript ErrorLogFile ExportedToolPalettes Ghostscript WindowsMetafile MuiCache" >nul 2>&1
+    if !errorlevel! neq 0 (
+        reg delete "%%k" /f >nul 2>&1
+        set /a DC_CDEL+=1
+    )
+)
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile) do (
+    reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "HKCU\SOFTWARE\Classes\%%n" /f >nul 2>&1
+        set /a DC_CDEL+=1
+    )
+)
+reg delete "HKCU\SOFTWARE\Classes\dwgviewr.9128.409" /f >nul 2>&1
+if !errorlevel! equ 0 set /a DC_CDEL+=1
+reg delete "HKCU\SOFTWARE\Classes\.dgn" /f >nul 2>&1
+if !errorlevel! equ 0 set /a DC_CDEL+=1
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+for /f "tokens=1,*" %%a in ('reg query "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" 2^>nul ^| findstr /i "Autodesk"') do (
+    reg delete "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%%a" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s 2^>nul ^| findstr /i "Autodesk"') do (
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /v "%%a" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+REM Second pass
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+echo    !DC_CDEL! user registry entries cleaned.
+
+echo.
 echo  Deep clean complete.
 echo  === DEEP CLEAN COMPLETE === >> "!LOGFILE!"
 echo.
 pause
 goto :run_verify
+
+REM ============================================================
+REM SEARCH FOR ALL AUTODESK REMNANTS
+REM ============================================================
+:search_remnants
+cls
+echo.
+echo  ========================================================
+echo   SEARCHING FOR ALL AUTODESK REMNANTS
+echo  ========================================================
+echo.
+set "SCANFILE=!LOGDIR!\remnant_scan.txt"
+echo Autodesk Remnant Scan - %date% %time% > "!SCANFILE!"
+echo ================================================ >> "!SCANFILE!"
+
+echo  Scanning... this may take a minute.
+echo.
+
+echo --- REGISTERED PRODUCTS --- >> "!SCANFILE!"
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+
+echo --- RUNNING PROCESSES --- >> "!SCANFILE!"
+wmic process where "ExecutablePath like '%%Autodesk%%' or ExecutablePath like '%%AdODIS%%' or ExecutablePath like '%%Adsk%%'" get Name,ProcessId,ExecutablePath /format:list 2>nul >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+
+echo --- SERVICES --- >> "!SCANFILE!"
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+    sc query %%s >nul 2>&1
+    if !errorlevel! equ 0 echo  FOUND: %%s >> "!SCANFILE!"
+)
+echo. >> "!SCANFILE!"
+
+echo --- FOLDERS IN PROGRAM FILES --- >> "!SCANFILE!"
+for %%d in (
+    "C:\Program Files\Autodesk"
+    "C:\Program Files\Common Files\Autodesk Shared"
+    "C:\Program Files\Common Files\Autodesk"
+    "C:\Program Files (x86)\Autodesk"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared"
+    "C:\Program Files (x86)\Common Files\Autodesk"
+) do (
+    if exist %%d (
+        echo  EXISTS: %%~d >> "!SCANFILE!"
+        dir /s /b %%d >> "!SCANFILE!" 2>nul
+        echo. >> "!SCANFILE!"
+    )
+)
+echo. >> "!SCANFILE!"
+
+echo --- DATA FOLDERS --- >> "!SCANFILE!"
+for %%d in (
+    "C:\ProgramData\Autodesk"
+    "C:\Autodesk"
+    "C:\Users\Public\Documents\Autodesk"
+    "%APPDATA%\Autodesk"
+    "%LOCALAPPDATA%\Autodesk"
+    "%LOCALAPPDATA%\Programs\Autodesk"
+    "%LOCALAPPDATA%\Temp\odis_download_dest"
+    "C:\ProgramData\FLEXnet"
+    "C:\Program Files\Common Files\Macrovision Shared"
+) do (
+    if exist "%%~d" (
+        echo  EXISTS: %%~d >> "!SCANFILE!"
+        dir /b "%%~d" >> "!SCANFILE!" 2>nul
+        echo. >> "!SCANFILE!"
+    )
+)
+echo. >> "!SCANFILE!"
+
+echo --- AUTODESK FOLDERS ANYWHERE ON C: --- >> "!SCANFILE!"
+echo  Searching C: drive for Autodesk folders... >> "!SCANFILE!"
+dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i "Desktop\\Autodesk_Uninstaller\|Downloads\\autodesk" >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+
+echo --- REGISTRY HIVES --- >> "!SCANFILE!"
+for %%k in (
+    "HKLM\SOFTWARE\Autodesk"
+    "HKCU\SOFTWARE\Autodesk"
+    "HKLM\SOFTWARE\WOW6432Node\Autodesk"
+    "HKLM\SOFTWARE\FLEXlm License Manager"
+    "HKCU\SOFTWARE\FLEXlm License Manager"
+    "HKLM\SOFTWARE\WOW6432Node\FLEXlm License Manager"
+    "HKLM\SOFTWARE\Macrovision"
+) do (
+    reg query %%k >nul 2>&1
+    if !errorlevel! equ 0 echo  EXISTS: %%~k >> "!SCANFILE!"
+)
+echo. >> "!SCANFILE!"
+
+echo --- REGISTRY DEEP SCAN --- >> "!SCANFILE!"
+<nul set /p "=  Scanning registry COM objects..."
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    echo  COM-CLSID: %%k >> "!SCANFILE!"
+)
+echo  done.
+<nul set /p "=  Scanning registry TypeLibs..."
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    echo  COM-TYPELIB: %%k >> "!SCANFILE!"
+)
+echo  done.
+<nul set /p "=  Scanning file associations..."
+echo --- AUTODESK-SPECIFIC CLASS KEYS --- >> "!SCANFILE!"
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    echo  ADSK-CLASS: %%k >> "!SCANFILE!"
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    echo  ADSK-CLASS: %%k >> "!SCANFILE!"
+)
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile dwgviewr cdc_auto_file CompleteR16PlotConfigurationFile) do (
+    reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
+    if !errorlevel! equ 0 echo  ADSK-CLASS: HKCU\SOFTWARE\Classes\%%n >> "!SCANFILE!"
+)
+reg query "HKCU\SOFTWARE\Classes\.dgn" >nul 2>&1
+if !errorlevel! equ 0 echo  ADSK-CLASS: HKCU\SOFTWARE\Classes\.dgn >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+echo --- GENERIC KEYS WITH AUTODESK ICON PATH --- >> "!SCANFILE!"
+echo  NOTE: These are NOT Autodesk keys. Their DefaultIcon >> "!SCANFILE!"
+echo  points to a deleted Autodesk exe. Harmless - Windows >> "!SCANFILE!"
+echo  will show a generic icon. Safe to leave. >> "!SCANFILE!"
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /d /s 2^>nul ^| findstr /i "HKEY_"') do (
+    echo "%%k" | findstr /i "DWGTrueView AutoCAD AutodeskDGN AutoLISP 3dsFile dwgviewr cdc_auto CompleteR16 CLSID" >nul 2>&1
+    if !errorlevel! neq 0 echo  GENERIC-ICON: %%k >> "!SCANFILE!"
+)
+echo  done.
+<nul set /p "=  Scanning shell extensions..."
+reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s /f "Autodesk" /d 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+echo  done.
+<nul set /p "=  Scanning uninstall registry..."
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
+    echo  UNINSTALL-REG: %%k >> "!SCANFILE!"
+)
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
+    echo  UNINSTALL-REG-32: %%k >> "!SCANFILE!"
+)
+echo  done.
+echo. >> "!SCANFILE!"
+
+echo --- SYSTEM PROFILE --- >> "!SCANFILE!"
+if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+    echo  EXISTS: systemprofile\AppData\Local\Autodesk >> "!SCANFILE!"
+    dir /s /b "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" >> "!SCANFILE!" 2>nul
+)
+echo. >> "!SCANFILE!"
+
+echo --- SCHEDULED TASKS --- >> "!SCANFILE!"
+schtasks /query /fo csv /nh 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+
+echo --- DESKTOP SHORTCUTS --- >> "!SCANFILE!"
+for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
+    if exist "%%~L" (
+        for %%f in ("%%~L\*.lnk") do (
+            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max Maya Navisworks" >nul 2>&1
+            if !errorlevel! equ 0 echo  SHORTCUT: %%f >> "!SCANFILE!"
+        )
+    )
+)
+echo. >> "!SCANFILE!"
+
+echo --- START MENU --- >> "!SCANFILE!"
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk" echo  EXISTS: User Start Menu\Autodesk >> "!SCANFILE!"
+if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" echo  EXISTS: All Users Start Menu\Autodesk >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+
+echo --- ENV VARIABLES --- >> "!SCANFILE!"
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
+if !errorlevel! equ 0 echo  SET: ADSKFLEX_LICENSE_FILE >> "!SCANFILE!"
+echo. >> "!SCANFILE!"
+
+echo  ========================================================
+echo   SCAN COMPLETE
+echo  ========================================================
+echo.
+echo  Results saved to: !SCANFILE!
+echo.
+echo  Contents:
+echo  --------------------------------------------------------
+type "!SCANFILE!"
+echo  --------------------------------------------------------
+echo.
+pause
+goto :main_menu
 
 REM ============================================================
 REM FINAL VERIFICATION
@@ -1610,27 +2007,62 @@ REM ============================================================
 cls
 echo.
 echo  ========================================================
-echo   FINAL VERIFICATION
+echo   FINAL VERIFICATION - DEEP SCAN
 echo  VERIFICATION START %time% >> "!DIAGFILE!"
 echo  ========================================================
+echo  Performing thorough remnant analysis...
 echo.
 set RM=0
+set "VLOG=!LOGDIR!\verify_details.txt"
+type nul > "!VLOG!"
+echo VERIFICATION DETAILS - %date% %time% >> "!VLOG!"
+echo ================================================ >> "!VLOG!"
 
-<nul set /p "=  Installed products..."
+REM === 1. REGISTERED PRODUCTS ===
+<nul set /p "=  [1/12] Installed products..."
 set VP=0
-for /f "tokens=2,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do set /a VP+=1
-for /f "tokens=2,*" %%a in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do set /a VP+=1
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "V_PUB="
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "Publisher" 2^>nul ^| findstr /i "Publisher"') do set "V_PUB=%%b"
+    if defined V_PUB (
+        echo "!V_PUB!" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 (
+            set /a VP+=1
+            for /f "tokens=2,*" %%a in ('reg query "%%k" /v "DisplayName" 2^>nul ^| findstr /i "DisplayName"') do echo   PRODUCT: %%b >> "!VLOG!"
+        )
+    )
+)
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "V_PUB="
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "Publisher" 2^>nul ^| findstr /i "Publisher"') do set "V_PUB=%%b"
+    if defined V_PUB (
+        echo "!V_PUB!" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 (
+            set /a VP+=1
+            for /f "tokens=2,*" %%a in ('reg query "%%k" /v "DisplayName" 2^>nul ^| findstr /i "DisplayName"') do echo   PRODUCT-32: %%b >> "!VLOG!"
+        )
+    )
+)
 if !VP! gtr 0 (
     echo  !VP! REMAINING
     set /a RM+=VP
 )
 if !VP! equ 0 echo  CLEAN
 
-<nul set /p "=  Processes..."
+REM === 2. RUNNING PROCESSES ===
+<nul set /p "=  [2/12] Processes..."
 set PR=0
-for %%p in (AdSSO AdskLicensing GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex) do (
+for %%p in (AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator) do (
     tasklist /fi "imagename eq %%p*" 2>nul | findstr /i "%%p" >nul 2>&1
-    if !errorlevel! equ 0 set /a PR+=1
+    if !errorlevel! equ 0 (
+        set /a PR+=1
+        echo   PROCESS: %%p >> "!VLOG!"
+    )
+)
+REM Also check by path
+for /f "tokens=1,2" %%a in ('wmic process where "ExecutablePath like '%%Autodesk%%'" get Name^,ProcessId 2^>nul ^| findstr /i ".exe"') do (
+    set /a PR+=1
+    echo   PROCESS-PATH: %%a PID:%%b >> "!VLOG!"
 )
 if !PR! gtr 0 (
     echo  !PR! REMAINING
@@ -1638,11 +2070,15 @@ if !PR! gtr 0 (
 )
 if !PR! equ 0 echo  CLEAN
 
-<nul set /p "=  Services..."
+REM === 3. SERVICES ===
+<nul set /p "=  [3/12] Services..."
 set SR=0
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM) do (
-    sc query "%%s" >nul 2>&1
-    if !errorlevel! equ 0 set /a SR+=1
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+    sc query %%s >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a SR+=1
+        echo   SERVICE: %%s >> "!VLOG!"
+    )
 )
 if !SR! gtr 0 (
     echo  !SR! REMAINING
@@ -1650,18 +2086,25 @@ if !SR! gtr 0 (
 )
 if !SR! equ 0 echo  CLEAN
 
-<nul set /p "=  Folders..."
+REM === 4. PROGRAM FOLDERS ===
+<nul set /p "=  [4/12] Program folders..."
 set FR=0
 for %%d in (
     "C:\Program Files\Autodesk"
     "C:\Program Files\Common Files\Autodesk Shared"
+    "C:\Program Files\Common Files\Autodesk"
     "C:\Program Files (x86)\Autodesk"
     "C:\Program Files (x86)\Common Files\Autodesk Shared"
+    "C:\Program Files (x86)\Common Files\Autodesk"
     "C:\ProgramData\Autodesk"
     "C:\Autodesk"
     "C:\Program Files\Common Files\Macrovision Shared"
+    "C:\Users\Public\Documents\Autodesk"
 ) do (
-    if exist %%d set /a FR+=1
+    if exist %%d (
+        set /a FR+=1
+        echo   FOLDER: %%~d >> "!VLOG!"
+    )
 )
 if !FR! gtr 0 (
     echo  !FR! REMAINING
@@ -1669,11 +2112,43 @@ if !FR! gtr 0 (
 )
 if !FR! equ 0 echo  CLEAN
 
-<nul set /p "=  Registry keys..."
+REM === 5. USER DATA FOLDERS ===
+<nul set /p "=  [5/12] User data folders..."
+set UF=0
+for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Programs\Autodesk" "%LOCALAPPDATA%\Temp\odis_download_dest") do (
+    if exist "%%~d" (
+        set /a UF+=1
+        echo   USER-FOLDER: %%~d >> "!VLOG!"
+    )
+)
+REM Check SYSTEM profile
+if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+    set /a UF+=1
+    echo   SYSTEM-FOLDER: systemprofile\Autodesk >> "!VLOG!"
+)
+if !UF! gtr 0 (
+    echo  !UF! REMAINING
+    set /a RM+=UF
+)
+if !UF! equ 0 echo  CLEAN
+
+REM === 6. AUTODESK REGISTRY HIVES ===
+<nul set /p "=  [6/12] Registry hives..."
 set RR=0
-for %%k in ("HKLM\SOFTWARE\Autodesk" "HKCU\SOFTWARE\Autodesk" "HKLM\SOFTWARE\WOW6432Node\Autodesk" "HKLM\SOFTWARE\Macrovision") do (
+for %%k in (
+    "HKLM\SOFTWARE\Autodesk"
+    "HKCU\SOFTWARE\Autodesk"
+    "HKLM\SOFTWARE\WOW6432Node\Autodesk"
+    "HKLM\SOFTWARE\FLEXlm License Manager"
+    "HKCU\SOFTWARE\FLEXlm License Manager"
+    "HKLM\SOFTWARE\WOW6432Node\FLEXlm License Manager"
+    "HKLM\SOFTWARE\Macrovision"
+) do (
     reg query %%k >nul 2>&1
-    if !errorlevel! equ 0 set /a RR+=1
+    if !errorlevel! equ 0 (
+        set /a RR+=1
+        echo   REG-HIVE: %%~k >> "!VLOG!"
+    )
 )
 if !RR! gtr 0 (
     echo  !RR! REMAINING
@@ -1681,12 +2156,77 @@ if !RR! gtr 0 (
 )
 if !RR! equ 0 echo  CLEAN
 
-<nul set /p "=  Legacy licensing..."
+REM === 7. REGISTRY DEEP SCAN - Autodesk-specific only ===
+<nul set /p "=  [7/12] Registry deep scan..."
+set RD=0
+REM Check for Autodesk-specific HKCU class keys
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RD+=1
+    echo   HKCU-CLASS: %%k >> "!VLOG!"
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RD+=1
+    echo   HKCU-CLASS: %%k >> "!VLOG!"
+)
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile) do (
+    reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a RD+=1
+        echo   HKCU-NAMED: %%n >> "!VLOG!"
+    )
+)
+reg query "HKCU\SOFTWARE\Classes\dwgviewr.9128.409" >nul 2>&1
+if !errorlevel! equ 0 (
+    set /a RD+=1
+    echo   HKCU-NAMED: dwgviewr.9128.409 >> "!VLOG!"
+)
+reg query "HKCU\SOFTWARE\Classes\.dgn" >nul 2>&1
+if !errorlevel! equ 0 (
+    set /a RD+=1
+    echo   HKCU-EXT: .dgn >> "!VLOG!"
+)
+REM Check for Autodesk CLSIDs in HKCU
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    set /a RD+=1
+    echo   HKCU-CLSID: %%k >> "!VLOG!"
+)
+REM Check for Autodesk COM in HKLM
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RD+=1
+    echo   COM-CLSID: %%k >> "!VLOG!"
+)
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RD+=1
+    echo   COM-TYPELIB: %%k >> "!VLOG!"
+)
+REM Check for shell extensions
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s /f "Autodesk" /d 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RD+=1
+    echo   SHELL-EXT: %%k >> "!VLOG!"
+)
+if !RD! gtr 0 (
+    echo  !RD! Autodesk class entries
+    set /a RM+=RD
+)
+if !RD! equ 0 echo  CLEAN
+
+REM === 8. LEGACY LICENSING ===
+<nul set /p "=  [8/12] Legacy licensing..."
 set LL=0
-if exist "C:\ProgramData\Autodesk\CLM" set /a LL+=1
+if exist "C:\ProgramData\Autodesk\CLM" (
+    set /a LL+=1
+    echo   LEGACY: CLM >> "!VLOG!"
+)
 if exist "C:\ProgramData\FLEXnet" (
     dir /b "C:\ProgramData\FLEXnet\adsk*" >nul 2>&1
-    if !errorlevel! equ 0 set /a LL+=1
+    if !errorlevel! equ 0 (
+        set /a LL+=1
+        echo   LEGACY: FLEXnet adsk files >> "!VLOG!"
+    )
+)
+if exist "%APPDATA%\Autodesk\ADUT" (
+    set /a LL+=1
+    echo   LEGACY: ADUT >> "!VLOG!"
 )
 if !LL! gtr 0 (
     echo  !LL! REMAINING
@@ -1694,43 +2234,102 @@ if !LL! gtr 0 (
 )
 if !LL! equ 0 echo  CLEAN
 
-<nul set /p "=  Env variables..."
+REM === 9. ENV VARIABLES ===
+<nul set /p "=  [9/12] Env variables..."
 set EV=0
 reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 set /a EV+=1
+if !errorlevel! equ 0 (
+    set /a EV+=1
+    echo   ENV: ADSKFLEX_LICENSE_FILE >> "!VLOG!"
+)
 if !EV! gtr 0 (
     echo  ADSKFLEX SET
     set /a RM+=EV
 )
 if !EV! equ 0 echo  CLEAN
 
-<nul set /p "=  Shortcuts..."
+REM === 10. SHORTCUTS ===
+<nul set /p "=  [10/12] Shortcuts..."
 set SV=0
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
             echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya Navisworks DWG Design Review 3ds Max" >nul 2>&1
-            if !errorlevel! equ 0 set /a SV+=1
+            if !errorlevel! equ 0 (
+                set /a SV+=1
+                echo   SHORTCUT: %%f >> "!VLOG!"
+            )
         )
     )
 )
-if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk" set /a SV+=1
-if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" set /a SV+=1
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
+    set /a SV+=1
+    echo   START-MENU: User\Autodesk >> "!VLOG!"
+)
+if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
+    set /a SV+=1
+    echo   START-MENU: AllUsers\Autodesk >> "!VLOG!"
+)
+for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar") do (
+    if exist "%%~T" (
+        for %%f in ("%%~T\*.lnk") do (
+            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max" >nul 2>&1
+            if !errorlevel! equ 0 (
+                set /a SV+=1
+                echo   TASKBAR: %%f >> "!VLOG!"
+            )
+        )
+    )
+)
 if !SV! gtr 0 (
     echo  !SV! REMAINING
     set /a RM+=SV
 )
 if !SV! equ 0 echo  CLEAN
 
+REM === 11. SCHEDULED TASKS ===
+<nul set /p "=  [11/12] Scheduled tasks..."
+set TK=0
+for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a TK+=1
+    echo   TASK: %%~n >> "!VLOG!"
+)
+if !TK! gtr 0 (
+    echo  !TK! REMAINING
+    set /a RM+=TK
+)
+if !TK! equ 0 echo  CLEAN
+
+REM === 12. FIREWALL RULES ===
+<nul set /p "=  [12/12] Firewall rules..."
+set FW=0
+for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
+    set /a FW+=1
+    echo   FIREWALL: %%r >> "!VLOG!"
+)
+if !FW! gtr 0 (
+    echo  !FW! REMAINING
+    set /a RM+=FW
+)
+if !FW! equ 0 echo  CLEAN
+
+REM === SUMMARY ===
 echo.
 echo  ========================================================
 if !RM! equ 0 (
-    echo   CLEAN - No Autodesk remnants detected.
-    echo   A reboot is recommended to finalize.
+    if !RD! equ 0 (
+        echo   FULLY CLEAN - Zero Autodesk remnants detected.
+    )
+    if !RD! gtr 0 (
+        echo   CLEAN - !RD! registry artifacts found.
+        echo   These are COM/file associations and are harmless.
+        echo   They will be cleaned up by Windows over time.
+    )
 )
 if !RM! gtr 0 (
     echo   !RM! ITEMS STILL REMAINING
     echo   Try: reboot then run this script again.
+    echo   Details: !VLOG!
 )
 echo  ========================================================
 echo.
