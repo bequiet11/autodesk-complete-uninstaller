@@ -1,38 +1,49 @@
 ---
 name: Bug report
-about: Create a report to help us improve
-title: ''
-labels: ''
+about: Report an issue with the Autodesk Complete Uninstaller
+title: '[BUG] '
+labels: bug
 assignees: ''
-
 ---
 
-**Describe the bug**
-A clear and concise description of what the bug is.
+**Tool version**
+v4.4 (or specify which version)
 
-**To Reproduce**
-Steps to reproduce the behavior:
-1. Go to '...'
-2. Click on '....'
-3. Scroll down to '....'
-4. See error
+**Windows version**
+- [ ] Windows 10
+- [ ] Windows 11
+- Build number (run `winver`): 
+
+**What happened?**
+A clear description of the bug.
+
+**Which menu option did you use?**
+- [ ] [1] Scan
+- [ ] [2] Uninstall Selected
+- [ ] [3] Full Uninstall + Deep Clean
+- [ ] [4] Deep Clean Only
+- [ ] [5] Final Verification
+- [ ] [7] Search for ALL Remnants
+
+**Autodesk products installed**
+List the Autodesk products that were installed (e.g., AutoCAD 2026, Revit 2025).
+
+**Steps to reproduce**
+1. Right-click .bat file, Run as administrator
+2. Choose option [...]
+3. ...
 
 **Expected behavior**
-A clear and concise description of what you expected to happen.
+What you expected to happen.
+
+**Log files**
+Please attach the following files from `Desktop\Autodesk_Uninstaller\`:
+- [ ] uninstall_log.txt
+- [ ] diagnostics.log
+- [ ] verify_details.txt (if you ran verification)
 
 **Screenshots**
-If applicable, add screenshots to help explain your problem.
-
-**Desktop (please complete the following information):**
- - OS: [e.g. iOS]
- - Browser [e.g. chrome, safari]
- - Version [e.g. 22]
-
-**Smartphone (please complete the following information):**
- - Device: [e.g. iPhone6]
- - OS: [e.g. iOS8.1]
- - Browser [e.g. stock browser, safari]
- - Version [e.g. 22]
+If applicable, add screenshots of the error.
 
 **Additional context**
-Add any other context about the problem here.
+Any other details (antivirus software, domain-joined PC, etc.).
