@@ -8,6 +8,8 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 <img width="774" height="488" alt="image" src="https://github.com/user-attachments/assets/080939d3-21cf-4de4-9885-50046f2d0082" />
 
+<img width="726" height="539" alt="image" src="https://github.com/user-attachments/assets/2fcf6d7b-65d7-40e4-8d58-c621333f9b6e" />
+
 <img width="774" height="488" alt="image" src="https://github.com/user-attachments/assets/04fbe67a-6b9d-4fd6-8758-1b406ff72e10" />
 
 <img width="777" height="485" alt="image" src="https://github.com/user-attachments/assets/d21c9989-d37e-4daf-9092-3c03cc7c58ee" />
