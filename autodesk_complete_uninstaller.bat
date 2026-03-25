@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v4.4
+title Autodesk Complete Uninstaller v4.4
 color 0F
 
 net session >nul 2>&1
@@ -21,7 +21,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v4.4 >> "!LOGFILE!"
+echo Autodesk Complete Uninstaller v4.4 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -88,7 +88,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  ========================================================
-echo    AUTODESK UNIVERSAL UNINSTALLER v4.4
+echo    AUTODESK COMPLETE UNINSTALLER v4.4
 echo    Supports all versions: 2015-2026+
 echo    Compatible with Windows 10 and Windows 11
 echo  ========================================================
