@@ -181,6 +181,8 @@ The FlexNet Licensing Service 64 is shared between Autodesk and Adobe. If you us
 | ODIS uninstaller fails (exit:1) | Phase C2 automatically force-cleans these |
 | Folders show as LOCKED | Tool uses takeown/icacls + Explorer restart; run Deep Clean again |
 | Verification shows items in [7/12] | Run [4] Deep Clean to remove file associations |
+| Antivirus blocks or quarantines the script | Add an exclusion for the `.bat` file or temporarily disable real-time protection; this is a false positive |
+| Windows SmartScreen blocks the file | Click **More info** > **Run anyway** — the script is unsigned but open source |
 
 ---
 
@@ -197,6 +199,9 @@ A: No. The tool achieves a verified zero-remnant clean on real machines in a sin
 
 **Q: How much disk space will this free?**
 A: Typically 5–50+ GB depending on installed products and the `C:\Autodesk` staging folder.
+
+**Q: My antivirus flagged the script. Is it safe?**
+A: Yes. The script is a plain-text `.bat` file — you can read every line in Notepad before running it. Antivirus software sometimes flags unsigned batch scripts that modify the registry. Add an exclusion or temporarily disable real-time protection to run it.
 
 ---
 
