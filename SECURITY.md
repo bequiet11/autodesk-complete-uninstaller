@@ -31,7 +31,7 @@ The script is a single, human-readable .bat file. You can open it in any text ed
                      
                       5. | Version | Supported |
                       6. | ------- | --------- |
-                      7. | v4.4    | Yes       |
-                      8. | < v4.4  | No        |
+                      7. | v5.0    | Yes       |
+                      8. | < v5.0  | No        |
                      
                       9. We recommend always using the latest release.

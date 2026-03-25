@@ -1,5 +1,19 @@
 # Changelog
 
+## v5.0 (2026-03-25)
+- Major UX overhaul with full ANSI color support and visual enhancements
+- NEW: Color-coded console output using ANSI escape sequences (16 foreground + 4 background colors)
+- NEW: Real-time progress bar with 12-phase tracking and percentage display
+- NEW: Timestamped operations — every action logged with [HH:MM:SS] prefix
+- NEW: Color-coded main menu with distinct colors per option (scan, uninstall, deep clean, verify, etc.)
+- NEW: Live progress counters during product scanning and uninstallation
+- NEW: Phase-by-phase status indicators with OK/FAIL/SKIP/WARN/INFO badges
+- NEW: Remnant search with animated scanning indicator and categorized results
+- NEW: Summary dashboard after uninstall showing products removed, time elapsed, and pass/fail counts
+- NEW: Enhanced verification output with color-coded pass/fail for each of 12 check categories
+- Improved log file headers with version and timestamp
+- **Result: Complete visual transformation — professional CLI experience with zero functional regression**
+
 ## v4.4 (2026-03-24)
 - NEW: Phase H2 — cleans ~90 user file association registry keys (DWGTrueView*, AutoCAD*, AutodeskDGN, AutoLISPFile, 3dsFile, dwgviewr, etc.)
 - NEW: Broad `HKCU\SOFTWARE\Classes` search for any Autodesk-named keys with exclusion filter to protect non-Autodesk keys (EncapsulatedPostscript, Ghostscript, WindowsMetafile, etc.)
