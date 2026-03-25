@@ -6,6 +6,13 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 ---
 
+<img width="774" height="488" alt="image" src="https://github.com/user-attachments/assets/080939d3-21cf-4de4-9885-50046f2d0082" />
+
+<img width="774" height="488" alt="image" src="https://github.com/user-attachments/assets/04fbe67a-6b9d-4fd6-8758-1b406ff72e10" />
+
+<img width="777" height="485" alt="image" src="https://github.com/user-attachments/assets/d21c9989-d37e-4daf-9092-3c03cc7c58ee" />
+
+
 ## Features
 
 - **Auto-detects all installed Autodesk products** by scanning both 64-bit and 32-bit Windows registry hives
