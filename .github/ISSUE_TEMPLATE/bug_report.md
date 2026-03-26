@@ -7,7 +7,7 @@ assignees: ''
 ---
 
 **Tool version**
-v4.4 (or specify which version)
+v5.0 (or specify which version)
 
 **Windows version**
 - [ ] Windows 10
