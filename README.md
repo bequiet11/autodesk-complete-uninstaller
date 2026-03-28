@@ -4,7 +4,7 @@ Autodesk Complete Uninstaller
 [![GitHub release](https://img.shields.io/github/v/release/bequiet11/autodesk-complete-uninstaller?color=blue&label=Latest%20Release)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bequiet11/autodesk-complete-uninstaller/blob/main/LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/bequiet11/autodesk-complete-uninstaller)
-[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F60_Clean-brightgreen?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/0399943b0d8e6f29578b03055184a1d0975d30a2f3319f109e23284df5f80b7c)
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F60_Clean-brightgreen?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/67831508e280ffa143a77537591a7c2df1549a0bbbdaef254ae21b8d4fc91103)
 [![GitHub downloads](https://img.shields.io/github/downloads/bequiet11/autodesk-complete-uninstaller/total?color=brightgreen&label=Downloads)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases)
 
 https://github.com/user-attachments/assets/198ecd10-13b6-4035-bcfb-b769a9e142db
