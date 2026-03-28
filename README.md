@@ -1,6 +1,6 @@
 Autodesk Complete Uninstaller
 
-https://github.com/user-attachments/assets/357b066b-c8e1-464e-b52c-680a4e583777
+https://github.com/user-attachments/assets/bd4bd647-320c-4940-92b7-65eae7f133db
 
 [![GitHub release](https://img.shields.io/github/v/release/bequiet11/autodesk-complete-uninstaller?color=blue&label=Latest%20Release)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bequiet11/autodesk-complete-uninstaller/blob/main/LICENSE)
