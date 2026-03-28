@@ -83,14 +83,16 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 | Option | Description |
 |--------|-------------|
-| **[1] Scan** | Detect all installed Autodesk products with type, priority, and version info |
-| **[2] Uninstall Selected** | Pick specific products to remove individually |
-| **[3] Full Uninstall + Deep Clean** | Complete removal: uninstall all products + remove all traces |
-| **[4] Deep Clean Only** | Remove remnants without product uninstall (for post-Control Panel cleanup) |
-| **[5] Final Verification** | 12-point deep scan to confirm zero remnants |
-| **[6] Create System Restore Point** | Create a restore point before making changes |
-| **[7] Search for ALL Autodesk Remnants** | Full system scan — folders, registry deep search, processes, services |
-| **[8] Exit** | Exit the tool |
+| **[1]** | **Scan** — Detect all installed Autodesk products with type, priority, and version info |
+| **[2]** | **Uninstall Selected** — Pick specific products to remove individually |
+| **[3]** | **Full Uninstall + Deep Clean** — Complete removal: uninstall all products + remove all traces |
+| **[4]** | **Deep Clean Only** — Remove remnants without product uninstall (for post-Control Panel cleanup) |
+| **[5]** | **Final Verification** — 12-point deep scan to confirm zero remnants |
+| **[6]** | **Create System Restore Point** — Create a restore point before making changes |
+| **[7]** | **Search for ALL Autodesk Remnants** — Full system scan — folders, registry deep search, processes, services |
+| **[8]** | **Full System Audit** — 13-point read-only preview of everything that would be removed, with disk space calculation |
+| **[10]** | **Fix Error 103** — 9-point diagnostic and repair for ODIS installer issues |
+| **[0]** | **Exit** |
 
 ---
 
@@ -132,6 +134,8 @@ C:\Program Files\Common Files\Macrovision Shared
 %LOCALAPPDATA%\Autodesk
 %LOCALAPPDATA%\Programs\Autodesk
 %LOCALAPPDATA%\Temp\odis_download_dest
+%LOCALAPPDATA%\com.autodesk.cer-dialog                 ← CER error dialog data
+C:\Windows\assembly\NativeImages_v4.0.30319_*\Autodesk*  ← .NET native image cache
 C:\Windows\System32\config\systemprofile\...\Autodesk  ← SYSTEM account
 ```
 
@@ -146,6 +150,10 @@ HKCU\SOFTWARE\Classes\DWGTrueView*     ← ~90 file association keys
 HKCU\SOFTWARE\Classes\AutoCAD*
 HKCU\SOFTWARE\Classes\AutodeskDGN, AutoLISPFile, 3dsFile, dwgviewr, etc.
 HKCU\SOFTWARE\Classes\CLSID\{Autodesk CLSIDs}
+HKLM\SOFTWARE\Classes\CLSID\{Autodesk CLSIDs}         ← COM objects
+HKLM\SOFTWARE\Classes\TypeLib\{Autodesk TypeLibs}      ← Type libraries
+HKCU\SOFTWARE\Classes\acadlt.*                         ← AutoCAD LT class keys
+HKCU\SOFTWARE\Classes\adsk.idmgr / adskidmgr          ← Identity Manager URL handlers
 Shell extension approvals, MuiCache entries
 ADSKFLEX_LICENSE_FILE environment variable
 ```
@@ -171,6 +179,8 @@ The tool creates a folder on your Desktop: `Autodesk_Uninstaller\`
 | `diagnostics.log` | System info, ODIS state, phase timestamps, error output |
 | `verify_details.txt` | Detailed list of any items found during verification |
 | `remnant_scan.txt` | Full system scan results (option [7]) |
+| `system_audit.txt` | Full system audit results (option [8]) |
+| `error103_log.txt` | Error 103 diagnostic results (option [10]) |
 | `*.reg` | Registry backups (can double-click to restore) |
 | `reboot_cleanup.bat` | Auto-scheduled cleanup for locked folders (if needed) |
 
@@ -203,6 +213,7 @@ The FlexNet Licensing Service 64 is shared between Autodesk and Adobe. If you us
 | ODIS uninstaller fails (exit:1) | Phase C2 automatically force-cleans these |
 | Folders show as LOCKED | Tool uses takeown/icacls + Explorer restart; run Deep Clean again |
 | Verification shows items in [7/12] | Run [4] Deep Clean to remove file associations |
+| Error 103 during install | Run [10] Fix Error 103 for 9-point ODIS diagnosis and guided repair |
 | Antivirus blocks or quarantines the script | Add an exclusion for the `.bat` file or temporarily disable real-time protection; this is a false positive |
 | Windows SmartScreen blocks the file | Click **More info** > **Run anyway** — the script is unsigned but open source |
 
@@ -221,6 +232,9 @@ A: No. The tool achieves a verified zero-remnant clean on real machines in a sin
 
 **Q: How much disk space will this free?**
 A: Typically 5–50+ GB depending on installed products and the `C:\Autodesk` staging folder.
+
+**Q: Autodesk installer gives Error 103. What do I do?**
+A: Run option [10] Fix Error 103 — it performs a 9-point diagnostic covering ODIS lock files, debugger keys, service state, ODIS infrastructure, VC++ redistributables, and Windows Event Viewer analysis. Each issue found can be repaired with a Y/N prompt.
 
 **Q: My antivirus flagged the script. Is it safe?**
 A: Yes. The script is a plain-text `.bat` file — you can read every line in Notepad before running it. Antivirus software sometimes flags unsigned batch scripts that modify the registry. Add an exclusion or temporarily disable real-time protection to run it.

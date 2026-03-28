@@ -6,32 +6,33 @@ The Autodesk Complete Uninstaller is a Windows batch script (.bat) that runs wit
 
 ## What the Script Does
 
-The script is a single, human-readable .bat file. You can open it in any text editor to review exactly what it does before running it. It will:
+The script is a single, human-readable `.bat` file. You can open it in any text editor to review exactly what it does before running it. It will:
 
 - Uninstall Autodesk products via standard Windows mechanisms (ODIS, MSI, BitRock)
-- - Remove Autodesk-related registry keys
-  - - Delete Autodesk-related folders and files
-    - - Remove Autodesk services and scheduled tasks
-     
-      - The script does **not**:
-      - - Connect to the internet
-        - - Send any data anywhere
-          - - Install any software
-            - - Modify non-Autodesk files or registry keys
-             
-              - ## Reporting a Vulnerability
-             
-              - If you discover a security issue with this tool, please report it responsibly:
-             
-              - 1. **Do not** open a public issue
-                2. 2. Email the maintainer directly at the address listed on the [GitHub profile](https://github.com/bequiet11)
-                   3. 3. Include a description of the issue, steps to reproduce, and potential impact
-                     
-                      4. ## Supported Versions
-                     
-                      5. | Version | Supported |
-                      6. | ------- | --------- |
-                      7. | v5.0    | Yes       |
-                      8. | < v5.0  | No        |
-                     
-                      9. We recommend always using the latest release.
+- Remove Autodesk-related registry keys
+- Delete Autodesk-related folders and files
+- Remove Autodesk services and scheduled tasks
+
+The script does **not**:
+
+- Connect to the internet
+- Send any data anywhere
+- Install any software
+- Modify non-Autodesk files or registry keys
+
+## Reporting a Vulnerability
+
+If you discover a security issue with this tool, please report it responsibly:
+
+1. **Do not** open a public issue
+2. Email the maintainer directly at the address listed on the GitHub profile
+3. Include a description of the issue, steps to reproduce, and potential impact
+
+## Supported Versions
+
+| Version | Supported |
+| ------- | --------- |
+| v5.5    | ✅ Yes    |
+| < v5.5  | ❌ No     |
+
+We recommend always using the [latest release](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest).

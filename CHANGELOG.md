@@ -1,5 +1,53 @@
 # Changelog
 
+## v5.5 (2026-03-28)
+
+### Fixed
+- **ODIS path quoting (critical):** All ODIS uninstalls silently failed with `'C:\Program' is not recognized` — `cmd /c "!UCMD!"` stripped outer quotes, breaking paths with spaces in "Program Files". Fixed at 3 execution points using delayed-expansion wildcard substitution to separate exe path from arguments. ODIS's own cleanup routines (license state, shared component ref-counting) now execute properly.
+- **HKLM COM registry cleanup:** CLSID and TypeLib entries in `HKLM\SOFTWARE\Classes` were detected by scans but never cleaned by any phase — added cleanup to both Full Clean Phase H2 and Deep Clean
+- **Orphan HKCU class keys:** `acadlt.*` (AutoCAD LT 2025/2026), `adsk.idmgr`, `adskidmgr` (Identity Manager URL handlers) survived cleanup due to missing search patterns — added to Phase H2, Deep Clean, and scan classification
+
+### Added
+- Cleanup for `%LOCALAPPDATA%\com.autodesk.cer-dialog` (CER error dialog data at non-standard path outside `%LOCALAPPDATA%\Autodesk`)
+- Cleanup for .NET NativeImages cache (`C:\Windows\assembly\NativeImages_v4.0.30319_*\Autodesk*`) — both 32-bit and 64-bit directories
+
+### Verified
+- **Zero-remnant result** on G9-BOX after Full Clean + Deep Clean of 38 products (AutoCAD LT 2025 + 2026, Maya 2025, Revit 2025, DWG TrueView 2026, Design Review, Autodesk Access, and 31 shared components). `verify_details.txt` empty, 12/12 checks CLEAN.
+
+## v5.4 (2026-03-28)
+
+### Fixed
+- **Option [7] terminal flood:** Replaced raw `type` dump of `remnant_scan.txt` with summary-only display — 11 categories with counters, color-coded, TOTAL row. Full details remain in file only.
+- **Crash bug:** Unescaped parentheses in `if ( )` blocks — `(CLSID + TypeLib)`, `(informational only, not counted)`, `(32-bit)`, `(PID: %%b)` — all fixed with `^(` `^)` escaping
+
+### Added
+- Live counters on all 11 scan steps at column 50
+
+## v5.3 (2026-03-28)
+
+### Improved
+- **Audit UX polish:** "Please wait" patience message, all 13 steps aligned to column 50
+- **Error 103 enhanced:** Windows Event Viewer analysis [9/9] via PowerShell `Get-WinEvent`, Autodesk Access version detection from file properties, ODIS Installer version detection
+- Renumbered Error 103 diagnostic checks from [X/7] to [X/9]
+
+## v5.2 (2026-03-28)
+
+### Fixed
+- **Audit crash:** `for /f` with pipe inside `if ( )` block + nested ifs — moved outside blocks, flattened with flags
+
+### Added
+- **[10] Fix Error 103** — 9-point diagnostic for ODIS installer issues: lock file, debugger keys (IFEO), Autodesk Access + ODIS Installer version, service state, ODIS infrastructure, ProductInformation.pit, TEMP paths, VC++ redistributables, Windows Event Viewer analysis
+- Menu reorganized: Exit moved to [0], choice range [0-10]
+
+## v5.1 (2026-03-28)
+
+### Added
+- **[8] Full System Audit** — 13-point read-only scan showing everything that would be removed, with disk space calculation
+- Live counters replacing dots (ANSI cursor positioning `ESC[48G]`)
+- Disk space calculation via PowerShell (handles >4GB)
+- Installer/download folder detection — separates Downloads/Chrome cache from product remnants
+- Optional installer/download cleanup prompt in Full Clean [3] and Deep Clean [4]
+
 ## v5.0 (2026-03-25)
 - Major UX overhaul with full ANSI color support and visual enhancements
 - NEW: Color-coded console output using ANSI escape sequences (16 foreground + 4 background colors)

@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Complete Uninstaller v5.0
+title Autodesk Universal Uninstaller v5.5
 
 REM === ANSI Color Setup ===
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
@@ -42,7 +42,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Complete Uninstaller v5.0 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v5.5 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -109,7 +109,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  !CCYN!============================================================!R!
-echo  !CCYN!  !BOLD!!CWHT!  AUTODESK COMPLETE UNINSTALLER v5.0         !R!
+echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.5         !R!
 echo  !CCYN!  !DIM!  Supports all versions: 2015-2026+                  !R!
 echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11          !R!
 echo  !CCYN!============================================================!R!
@@ -121,12 +121,16 @@ echo   !CYLW![4]!R!  !CYLW!Deep Clean Only!R! - remnants, no product uninstall
 echo   !CGRN![5]!R!  !CGRN!Final Verification!R! - 12-point deep scan
 echo   !CBLU![6]!R!  !CBLU!Create System Restore Point!R!
 echo   !CMAG![7]!R!  !CMAG!Search!R! for ALL Autodesk remnants
-echo   !DIM![8]!R!  Exit
+echo   !CWHT![8]!R!  !CWHT!Full System Audit!R! - preview everything that will be removed
+echo.
+echo   !CYLW![10]!R! !CYLW!Fix Error 103!R! - diagnose and repair ODIS installer issues
+echo.
+echo   !DIM![0]!R!  Exit
 echo.
 echo  !DIM!Log: !LOGDIR!\uninstall_log.txt!R!
 echo  !DIM!Diagnostics: !LOGDIR!\diagnostics.log!R!
 echo.
-set /p "MC=  !CWHT!Enter choice [1-8]:!R! "
+set /p "MC=  !CWHT!Enter choice [0-10]:!R! "
 if "!MC!"=="1" goto :scan_products
 if "!MC!"=="2" goto :uninstall_selected
 if "!MC!"=="3" goto :full_clean
@@ -134,7 +138,9 @@ if "!MC!"=="4" goto :deep_clean
 if "!MC!"=="5" goto :run_verify
 if "!MC!"=="6" goto :create_restore
 if "!MC!"=="7" goto :search_remnants
-if "!MC!"=="8" exit /b 0
+if "!MC!"=="8" goto :full_audit
+if "!MC!"=="10" goto :fix_error103
+if "!MC!"=="0" exit /b 0
 goto :main_menu
 
 REM ============================================================
@@ -485,7 +491,8 @@ for %%n in (!SEL!) do (
             set "UCMD=!PUNINST!"
             echo "!UCMD!" | findstr /i "\-q" >nul 2>&1
             if !errorlevel! neq 0 set "UCMD=!UCMD! -q"
-            start /wait "" cmd /c "!UCMD!" >nul 2>&1
+            set "ODIS_ARGS=!UCMD:*Installer.exe=!"
+            "C:\Program Files\Autodesk\AdODIS\V1\Installer.exe"!ODIS_ARGS! >nul 2>&1
             set "UERR=!errorlevel!"
             if !UERR! equ 0 echo  !CGRN!OK!R!
             if !UERR! neq 0 echo  !CRED!FAIL exit:!UERR!!R!
@@ -577,6 +584,22 @@ if /i not "!FC_CONF!"=="YES" (
     echo  Aborted.
     pause
     goto :main_menu
+)
+
+REM Check for installer/download folders
+set "CLEAN_INSTALLERS=0"
+set "INSTALLER_FOUND=0"
+for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /i "\\Downloads\\"') do set "INSTALLER_FOUND=1"
+if exist "%USERPROFILE%\Downloads\*Autodesk*" set "INSTALLER_FOUND=1"
+if !INSTALLER_FOUND! equ 1 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! Autodesk !CWHT!installer/download files!R!!CYLW! were found in your     !R!
+    echo  !CYLW! Downloads folder. These are setup packages, not products.  !R!
+    echo  !CYLW! They are !CWHT!NOT!R!!CYLW! removed by default.                          !R!
+    echo  !CYLW!============================================================!R!
+    set /p "FC_INST=  Also remove installer files from Downloads? [Y/N]: "
+    if /i "!FC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
 echo.
@@ -703,7 +726,8 @@ for %%P in (1 3 4 5 6 7 8) do (
                     if !ODIS_META_OK! equ 1 (
                         <nul set /p "=..."
                         del /f "!LOGDIR!\odis_out.tmp" >nul 2>&1
-                        cmd /c "!UCMD!" >"!LOGDIR!\odis_out.tmp" 2>&1
+                        set "ODIS_ARGS=!UCMD:*Installer.exe=!"
+                        "C:\Program Files\Autodesk\AdODIS\V1\Installer.exe"!ODIS_ARGS! >"!LOGDIR!\odis_out.tmp" 2>&1
                         set "UERR=!errorlevel!"
                         echo   EXIT: !UERR! >> "!LOGFILE!"
                         echo   DIAG: ODIS exit=!UERR! >> "!DIAGFILE!"
@@ -880,7 +904,8 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVer
                             if !errorlevel! neq 0 set "R_CMD=!R_CMD! -q"
                             <nul set /p "=..."
                             del /f "!LOGDIR!\odis_out.tmp" >nul 2>&1
-                            cmd /c "!R_CMD!" >"!LOGDIR!\odis_out.tmp" 2>&1
+                            set "ODIS_ARGS=!R_CMD:*Installer.exe=!"
+                            "C:\Program Files\Autodesk\AdODIS\V1\Installer.exe"!ODIS_ARGS! >"!LOGDIR!\odis_out.tmp" 2>&1
                             set "RERR=!errorlevel!"
                             if !RERR! equ 0 (
                                 echo  !CGRN!OK!R!
@@ -1187,6 +1212,47 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         )
     )
 )
+if exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" (
+    <nul set /p "=      com.autodesk.cer-dialog..."
+    rd /s /q "%LOCALAPPDATA%\com.autodesk.cer-dialog" 2>nul
+    if not exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" (
+        echo  !CGRN!deleted.!R!
+        set /a DOK+=1
+    )
+    if exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" (
+        echo  !CRED!LOCKED.!R!
+        set /a DFL+=1
+    )
+)
+REM Clean .NET NativeImages for Autodesk assemblies
+for /d %%d in ("C:\Windows\assembly\NativeImages_v4.0.30319_64\Autodesk*") do (
+    if exist "%%d" (
+        <nul set /p "=      NativeImage: %%~nxd..."
+        rd /s /q "%%d" 2>nul
+        if not exist "%%d" (
+            echo  !CGRN!deleted.!R!
+            set /a DOK+=1
+        )
+        if exist "%%d" (
+            echo  !CRED!LOCKED.!R!
+            set /a DFL+=1
+        )
+    )
+)
+for /d %%d in ("C:\Windows\assembly\NativeImages_v4.0.30319_32\Autodesk*") do (
+    if exist "%%d" (
+        <nul set /p "=      NativeImage: %%~nxd..."
+        rd /s /q "%%d" 2>nul
+        if not exist "%%d" (
+            echo  !CGRN!deleted.!R!
+            set /a DOK+=1
+        )
+        if exist "%%d" (
+            echo  !CRED!LOCKED.!R!
+            set /a DFL+=1
+        )
+    )
+)
 REM SYSTEM profile and other user profiles
 if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
     <nul set /p "=      SYSTEM profile Autodesk..."
@@ -1227,6 +1293,38 @@ if !DFL! gtr 0 (
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" /v "AutodeskCleanup" /t REG_SZ /d "\"!REBOOT_BAT!\"" /f >nul 2>&1
     echo      !CYLW!Reboot cleanup script scheduled.!R!
     echo   REBOOT CLEANUP SCHEDULED >> "!LOGFILE!"
+)
+echo.
+
+REM --- Optional: Installer/Download files cleanup ---
+if !CLEAN_INSTALLERS! equ 1 (
+    echo  !DIM![%time:~0,8%]!R! !CYLW!!BOLD![OPT]!R! !CWHT!Removing installer/download files...!R!
+    set INST_DEL=0
+    for /d %%d in ("%USERPROFILE%\Downloads\*Autodesk*" "%USERPROFILE%\Downloads\*AutoCAD*" "%USERPROFILE%\Downloads\*Revit*" "%USERPROFILE%\Downloads\*Inventor*" "%USERPROFILE%\Downloads\*Maya*" "%USERPROFILE%\Downloads\*3dsMax*") do (
+        if exist "%%d" (
+            <nul set /p "=      %%~nxd..."
+            rd /s /q "%%d" 2>nul
+            if not exist "%%d" (
+                echo  !CGRN!deleted.!R!
+                set /a INST_DEL+=1
+            )
+            if exist "%%d" echo  !CRED!LOCKED.!R!
+        )
+    )
+    REM Clean browser cache for autodesk.com
+    for /d %%d in ("%LOCALAPPDATA%\Google\Chrome\User Data\Default\IndexedDB\*autodesk*") do (
+        if exist "%%d" (
+            <nul set /p "=      Chrome cache: %%~nxd..."
+            rd /s /q "%%d" 2>nul
+            if not exist "%%d" (
+                echo  !CGRN!deleted.!R!
+                set /a INST_DEL+=1
+            )
+            if exist "%%d" echo  !CRED!LOCKED.!R!
+        )
+    )
+    echo      !INST_DEL! installer items removed.
+    echo  OPTIONAL: !INST_DEL! installer/download items removed >> "!LOGFILE!"
 )
 echo.
 
@@ -1416,6 +1514,10 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>
     reg delete "%%k" /f >nul 2>&1
     set /a CDEL+=1
 )
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "acadlt" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^>nul ^| findstr /i "HKEY_"') do (
     echo "%%k" | findstr /i "EncapsulatedPostscript ErrorLogFile ExportedToolPalettes Ghostscript WindowsMetafile MuiCache" >nul 2>&1
     if !errorlevel! neq 0 (
@@ -1423,7 +1525,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^
         set /a CDEL+=1
     )
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile) do (
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         reg delete "HKCU\SOFTWARE\Classes\%%n" /f >nul 2>&1
@@ -1439,6 +1541,16 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autode
     reg delete "%%k" /f >nul 2>&1
     set /a CDEL+=1
 )
+REM Delete CLSIDs that reference Autodesk in HKLM
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+REM Delete TypeLibs that reference Autodesk in HKLM
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*TypeLib.*{"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
 REM Clean MuiCache Autodesk entries
 for /f "tokens=1,*" %%a in ('reg query "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" 2^>nul ^| findstr /i "Autodesk"') do (
     reg delete "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%%a" /f >nul 2>&1
@@ -1449,12 +1561,16 @@ for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentV
     reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /v "%%a" /f >nul 2>&1
     set /a CDEL+=1
 )
-REM Second pass: catch any remaining DWGTrueView/AutoCAD keys
+REM Second pass: catch any remaining DWGTrueView/AutoCAD/acadlt keys
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
     reg delete "%%k" /f >nul 2>&1
     set /a CDEL+=1
 )
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "acadlt" /k 2^>nul ^| findstr /i "HKEY_"') do (
     reg delete "%%k" /f >nul 2>&1
     set /a CDEL+=1
 )
@@ -1501,6 +1617,22 @@ if /i not "!DC_CONF!"=="YES" (
     echo  Aborted.
     pause
     goto :main_menu
+)
+
+REM Check for installer/download folders
+set "CLEAN_INSTALLERS=0"
+set "INSTALLER_FOUND=0"
+for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /i "\\Downloads\\"') do set "INSTALLER_FOUND=1"
+if exist "%USERPROFILE%\Downloads\*Autodesk*" set "INSTALLER_FOUND=1"
+if !INSTALLER_FOUND! equ 1 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! Autodesk !CWHT!installer/download files!R!!CYLW! were found in your     !R!
+    echo  !CYLW! Downloads folder. These are setup packages, not products.  !R!
+    echo  !CYLW! They are !CWHT!NOT!R!!CYLW! removed by default.                          !R!
+    echo  !CYLW!============================================================!R!
+    set /p "DC_INST=  Also remove installer files from Downloads? [Y/N]: "
+    if /i "!DC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
 echo.
@@ -1678,11 +1810,64 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         if exist "%%~d" echo  !CRED!LOCKED.!R!
     )
 )
+if exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" (
+    <nul set /p "=    com.autodesk.cer-dialog..."
+    rd /s /q "%LOCALAPPDATA%\com.autodesk.cer-dialog" 2>nul
+    if not exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" echo  !CGRN!deleted.!R!
+    if exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" echo  !CRED!LOCKED.!R!
+)
+REM Clean .NET NativeImages for Autodesk assemblies
+for /d %%d in ("C:\Windows\assembly\NativeImages_v4.0.30319_64\Autodesk*") do (
+    if exist "%%d" (
+        <nul set /p "=    NativeImage: %%~nxd..."
+        rd /s /q "%%d" 2>nul
+        if not exist "%%d" echo  !CGRN!deleted.!R!
+        if exist "%%d" echo  !CRED!LOCKED.!R!
+    )
+)
+for /d %%d in ("C:\Windows\assembly\NativeImages_v4.0.30319_32\Autodesk*") do (
+    if exist "%%d" (
+        <nul set /p "=    NativeImage: %%~nxd..."
+        rd /s /q "%%d" 2>nul
+        if not exist "%%d" echo  !CGRN!deleted.!R!
+        if exist "%%d" echo  !CRED!LOCKED.!R!
+    )
+)
 if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
     <nul set /p "=    SYSTEM profile Autodesk..."
     rd /s /q "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" 2>nul
     if not exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" echo  !CGRN!deleted.!R!
     if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" echo  !CRED!LOCKED.!R!
+)
+
+REM --- Optional: Installer/Download files cleanup ---
+if !CLEAN_INSTALLERS! equ 1 (
+    echo.
+    echo  !CYLW!!BOLD!Removing installer/download files [optional]...!R!
+    set DC_INST_DEL=0
+    for /d %%d in ("%USERPROFILE%\Downloads\*Autodesk*" "%USERPROFILE%\Downloads\*AutoCAD*" "%USERPROFILE%\Downloads\*Revit*" "%USERPROFILE%\Downloads\*Inventor*" "%USERPROFILE%\Downloads\*Maya*" "%USERPROFILE%\Downloads\*3dsMax*") do (
+        if exist "%%d" (
+            <nul set /p "=    %%~nxd..."
+            rd /s /q "%%d" 2>nul
+            if not exist "%%d" (
+                echo  !CGRN!deleted.!R!
+                set /a DC_INST_DEL+=1
+            )
+            if exist "%%d" echo  !CRED!LOCKED.!R!
+        )
+    )
+    for /d %%d in ("%LOCALAPPDATA%\Google\Chrome\User Data\Default\IndexedDB\*autodesk*") do (
+        if exist "%%d" (
+            <nul set /p "=    Chrome cache: %%~nxd..."
+            rd /s /q "%%d" 2>nul
+            if not exist "%%d" (
+                echo  !CGRN!deleted.!R!
+                set /a DC_INST_DEL+=1
+            )
+            if exist "%%d" echo  !CRED!LOCKED.!R!
+        )
+    )
+    echo    !DC_INST_DEL! installer items removed.
 )
 
 echo.
@@ -1805,6 +1990,10 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>
     reg delete "%%k" /f >nul 2>&1
     set /a DC_CDEL+=1
 )
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "acadlt" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^>nul ^| findstr /i "HKEY_"') do (
     echo "%%k" | findstr /i "EncapsulatedPostscript ErrorLogFile ExportedToolPalettes Ghostscript WindowsMetafile MuiCache" >nul 2>&1
     if !errorlevel! neq 0 (
@@ -1812,7 +2001,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^
         set /a DC_CDEL+=1
     )
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile) do (
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         reg delete "HKCU\SOFTWARE\Classes\%%n" /f >nul 2>&1
@@ -1824,6 +2013,16 @@ if !errorlevel! equ 0 set /a DC_CDEL+=1
 reg delete "HKCU\SOFTWARE\Classes\.dgn" /f >nul 2>&1
 if !errorlevel! equ 0 set /a DC_CDEL+=1
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+REM Delete CLSIDs that reference Autodesk in HKLM
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+REM Delete TypeLibs that reference Autodesk in HKLM
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*TypeLib.*{"') do (
     reg delete "%%k" /f >nul 2>&1
     set /a DC_CDEL+=1
 )
@@ -1841,6 +2040,10 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k
     set /a DC_CDEL+=1
 )
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    reg delete "%%k" /f >nul 2>&1
+    set /a DC_CDEL+=1
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "acadlt" /k 2^>nul ^| findstr /i "HKEY_"') do (
     reg delete "%%k" /f >nul 2>&1
     set /a DC_CDEL+=1
 )
@@ -1870,29 +2073,68 @@ echo ================================================ >> "!SCANFILE!"
 echo  !DIM!Scanning 11 areas... progress shown below.!R!
 echo.
 
+REM === 1. REGISTERED PRODUCTS ===
 <nul set /p "=  !CWHT![ 1/11]!R! Registered products............ "
+set RS_PROD=0
 echo --- REGISTERED PRODUCTS --- >> "!SCANFILE!"
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
-reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RS_PROD+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_PROD!  !R!"
+    echo  %%k >> "!SCANFILE!"
+)
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RS_PROD+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_PROD!  !R!"
+    echo  %%k >> "!SCANFILE!"
+)
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_PROD! gtr 0 (
+    echo !ESC![50G!CRED!!RS_PROD! found                    !R!
+)
+if !RS_PROD! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 2. RUNNING PROCESSES ===
 <nul set /p "=  !CWHT![ 2/11]!R! Running processes.............. "
+set RS_PROC=0
 echo --- RUNNING PROCESSES --- >> "!SCANFILE!"
-wmic process where "ExecutablePath like '%%Autodesk%%' or ExecutablePath like '%%AdODIS%%' or ExecutablePath like '%%Adsk%%'" get Name,ProcessId,ExecutablePath /format:list 2>nul >> "!SCANFILE!"
+for /f "tokens=1" %%a in ('wmic process where "ExecutablePath like '%%Autodesk%%' or ExecutablePath like '%%AdODIS%%' or ExecutablePath like '%%Adsk%%'" get Name 2^>nul ^| findstr /i ".exe"') do (
+    set /a RS_PROC+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_PROC!  !R!"
+    echo  %%a >> "!SCANFILE!"
+)
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_PROC! gtr 0 (
+    echo !ESC![50G!CRED!!RS_PROC! found                    !R!
+)
+if !RS_PROC! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 3. SERVICES ===
 <nul set /p "=  !CWHT![ 3/11]!R! Services....................... "
+set RS_SVC=0
 echo --- SERVICES --- >> "!SCANFILE!"
 for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
-    if !errorlevel! equ 0 echo  FOUND: %%s >> "!SCANFILE!"
+    if !errorlevel! equ 0 (
+        set /a RS_SVC+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_SVC!  !R!"
+        echo  FOUND: %%s >> "!SCANFILE!"
+    )
 )
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_SVC! gtr 0 (
+    echo !ESC![50G!CRED!!RS_SVC! found                    !R!
+)
+if !RS_SVC! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 4. PROGRAM FILES FOLDERS ===
 <nul set /p "=  !CWHT![ 4/11]!R! Program Files folders.......... "
+set RS_PF=0
 echo --- FOLDERS IN PROGRAM FILES --- >> "!SCANFILE!"
 for %%d in (
     "C:\Program Files\Autodesk"
@@ -1903,15 +2145,24 @@ for %%d in (
     "C:\Program Files (x86)\Common Files\Autodesk"
 ) do (
     if exist %%d (
+        set /a RS_PF+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_PF!  !R!"
         echo  EXISTS: %%~d >> "!SCANFILE!"
         dir /s /b %%d >> "!SCANFILE!" 2>nul
         echo. >> "!SCANFILE!"
     )
 )
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_PF! gtr 0 (
+    echo !ESC![50G!CRED!!RS_PF! found                    !R!
+)
+if !RS_PF! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 5. DATA FOLDERS ===
 <nul set /p "=  !CWHT![ 5/11]!R! Data folders................... "
+set RS_DATA=0
 echo --- DATA FOLDERS --- >> "!SCANFILE!"
 for %%d in (
     "C:\ProgramData\Autodesk"
@@ -1925,22 +2176,44 @@ for %%d in (
     "C:\Program Files\Common Files\Macrovision Shared"
 ) do (
     if exist "%%~d" (
+        set /a RS_DATA+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_DATA!  !R!"
         echo  EXISTS: %%~d >> "!SCANFILE!"
         dir /b "%%~d" >> "!SCANFILE!" 2>nul
         echo. >> "!SCANFILE!"
     )
 )
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_DATA! gtr 0 (
+    echo !ESC![50G!CRED!!RS_DATA! found                    !R!
+)
+if !RS_DATA! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 6. FULL C: DRIVE SEARCH ===
 <nul set /p "=  !CWHT![ 6/11]!R! Full C: drive search........... "
+set RS_CDRIVE=0
 echo --- AUTODESK FOLDERS ANYWHERE ON C: --- >> "!SCANFILE!"
 echo  Searching C: drive for Autodesk folders... >> "!SCANFILE!"
-dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i "Desktop\\Autodesk_Uninstaller\|Downloads\\autodesk" >> "!SCANFILE!"
+dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i "Desktop\\Autodesk_Uninstaller\|Downloads\\autodesk" > "!LOGDIR!\remnant_cdrive_tmp.txt"
+for /f "tokens=*" %%L in ('type "!LOGDIR!\remnant_cdrive_tmp.txt" 2^>nul') do (
+    set /a RS_CDRIVE+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_CDRIVE!  !R!"
+    echo  %%L >> "!SCANFILE!"
+)
+del "!LOGDIR!\remnant_cdrive_tmp.txt" 2>nul
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_CDRIVE! gtr 0 (
+    echo !ESC![50G!CRED!!RS_CDRIVE! found                    !R!
+)
+if !RS_CDRIVE! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 7. REGISTRY HIVES ===
 <nul set /p "=  !CWHT![ 7/11]!R! Registry hives................. "
+set RS_REG=0
 echo --- REGISTRY HIVES --- >> "!SCANFILE!"
 for %%k in (
     "HKLM\SOFTWARE\Autodesk"
@@ -1952,35 +2225,68 @@ for %%k in (
     "HKLM\SOFTWARE\Macrovision"
 ) do (
     reg query %%k >nul 2>&1
-    if !errorlevel! equ 0 echo  EXISTS: %%~k >> "!SCANFILE!"
+    if !errorlevel! equ 0 (
+        set /a RS_REG+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_REG!  !R!"
+        echo  EXISTS: %%~k >> "!SCANFILE!"
+    )
 )
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_REG! gtr 0 (
+    echo !ESC![50G!CRED!!RS_REG! found                    !R!
+)
+if !RS_REG! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 8. REGISTRY DEEP SCAN - COM ===
 <nul set /p "=  !CWHT![ 8/11]!R! Registry deep scan - COM....... "
+set RS_COM=0
 echo --- REGISTRY DEEP SCAN --- >> "!SCANFILE!"
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RS_COM+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_COM!  !R!"
     echo  COM-CLSID: %%k >> "!SCANFILE!"
 )
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RS_COM+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_COM!  !R!"
     echo  COM-TYPELIB: %%k >> "!SCANFILE!"
 )
-echo !CGRN!done!R!
+if !RS_COM! gtr 0 (
+    echo !ESC![50G!CRED!!RS_COM! found                    !R!
+)
+if !RS_COM! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 9. REGISTRY DEEP SCAN - CLASSES ===
 <nul set /p "=  !CWHT![ 9/11]!R! Registry deep scan - classes... "
+set RS_CLASS=0
 echo --- AUTODESK-SPECIFIC CLASS KEYS --- >> "!SCANFILE!"
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RS_CLASS+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_CLASS!  !R!"
     echo  ADSK-CLASS: %%k >> "!SCANFILE!"
 )
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a RS_CLASS+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_CLASS!  !R!"
     echo  ADSK-CLASS: %%k >> "!SCANFILE!"
 )
 for %%n in (AutodeskDGN AutoLISPFile 3dsFile dwgviewr cdc_auto_file CompleteR16PlotConfigurationFile) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
-    if !errorlevel! equ 0 echo  ADSK-CLASS: HKCU\SOFTWARE\Classes\%%n >> "!SCANFILE!"
+    if !errorlevel! equ 0 (
+        set /a RS_CLASS+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_CLASS!  !R!"
+        echo  ADSK-CLASS: HKCU\SOFTWARE\Classes\%%n >> "!SCANFILE!"
+    )
 )
 reg query "HKCU\SOFTWARE\Classes\.dgn" >nul 2>&1
-if !errorlevel! equ 0 echo  ADSK-CLASS: HKCU\SOFTWARE\Classes\.dgn >> "!SCANFILE!"
+if !errorlevel! equ 0 (
+    set /a RS_CLASS+=1
+    echo  ADSK-CLASS: HKCU\SOFTWARE\Classes\.dgn >> "!SCANFILE!"
+)
 echo. >> "!SCANFILE!"
 echo ================================================ >> "!SCANFILE!"
 echo  *** SAFE TO IGNORE - NOT Autodesk keys *** >> "!SCANFILE!"
@@ -1989,33 +2295,64 @@ echo  DefaultIcon points to a deleted Autodesk exe. >> "!SCANFILE!"
 echo  Windows shows a generic icon. Completely harmless. >> "!SCANFILE!"
 echo  Do NOT delete - they may be used by other apps. >> "!SCANFILE!"
 echo ================================================ >> "!SCANFILE!"
+set RS_GENERIC=0
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /d /s 2^>nul ^| findstr /i "HKEY_"') do (
-    echo "%%k" | findstr /i "DWGTrueView AutoCAD AutodeskDGN AutoLISP 3dsFile dwgviewr cdc_auto CompleteR16 CLSID" >nul 2>&1
-    if !errorlevel! neq 0 echo  GENERIC-ICON: %%k >> "!SCANFILE!"
+    echo "%%k" | findstr /i "DWGTrueView AutoCAD AutodeskDGN AutoLISP 3dsFile dwgviewr cdc_auto CompleteR16 CLSID acadlt adsk.idmgr adskidmgr" >nul 2>&1
+    if !errorlevel! neq 0 (
+        set /a RS_GENERIC+=1
+        echo  GENERIC-ICON: %%k >> "!SCANFILE!"
+    )
 )
-echo !CGRN!done!R!
+if !RS_CLASS! gtr 0 (
+    echo !ESC![50G!CRED!!RS_CLASS! found                    !R!
+)
+if !RS_CLASS! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 10. SHELL EXTENSIONS + UNINSTALL REG ===
 <nul set /p "=  !CWHT![10/11]!R! Shell extensions + uninstall... "
-reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s /f "Autodesk" /d 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+set RS_SHELL=0
+echo --- SHELL EXTENSIONS + UNINSTALL REG --- >> "!SCANFILE!"
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s /f "Autodesk" /d 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RS_SHELL+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_SHELL!  !R!"
+    echo  SHELL-EXT: %%k >> "!SCANFILE!"
+)
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RS_SHELL+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_SHELL!  !R!"
     echo  UNINSTALL-REG: %%k >> "!SCANFILE!"
 )
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RS_SHELL+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !RS_SHELL!  !R!"
     echo  UNINSTALL-REG-32: %%k >> "!SCANFILE!"
 )
 echo. >> "!SCANFILE!"
-echo !CGRN!done!R!
+if !RS_SHELL! gtr 0 (
+    echo !ESC![50G!CRED!!RS_SHELL! found                    !R!
+)
+if !RS_SHELL! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
+REM === 11. SHORTCUTS, TASKS, ENV VARS ===
 <nul set /p "=  !CWHT![11/11]!R! Shortcuts, tasks, env vars.... "
+set RS_OTHER=0
 echo --- SYSTEM PROFILE --- >> "!SCANFILE!"
 if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
+    set /a RS_OTHER+=1
     echo  EXISTS: systemprofile\AppData\Local\Autodesk >> "!SCANFILE!"
     dir /s /b "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" >> "!SCANFILE!" 2>nul
 )
 echo. >> "!SCANFILE!"
 
 echo --- SCHEDULED TASKS --- >> "!SCANFILE!"
-schtasks /query /fo csv /nh 2>nul | findstr /i "Autodesk" >> "!SCANFILE!"
+for /f "tokens=*" %%t in ('schtasks /query /fo csv /nh 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a RS_OTHER+=1
+    echo  TASK: %%t >> "!SCANFILE!"
+)
 echo. >> "!SCANFILE!"
 
 echo --- DESKTOP SHORTCUTS --- >> "!SCANFILE!"
@@ -2023,40 +2360,1048 @@ for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
             echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max Maya Navisworks" >nul 2>&1
-            if !errorlevel! equ 0 echo  SHORTCUT: %%f >> "!SCANFILE!"
+            if !errorlevel! equ 0 (
+                set /a RS_OTHER+=1
+                echo  SHORTCUT: %%f >> "!SCANFILE!"
+            )
         )
     )
 )
 echo. >> "!SCANFILE!"
 
 echo --- START MENU --- >> "!SCANFILE!"
-if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk" echo  EXISTS: User Start Menu\Autodesk >> "!SCANFILE!"
-if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" echo  EXISTS: All Users Start Menu\Autodesk >> "!SCANFILE!"
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
+    set /a RS_OTHER+=1
+    echo  EXISTS: User Start Menu\Autodesk >> "!SCANFILE!"
+)
+if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
+    set /a RS_OTHER+=1
+    echo  EXISTS: All Users Start Menu\Autodesk >> "!SCANFILE!"
+)
 echo. >> "!SCANFILE!"
 
 echo --- ENV VARIABLES --- >> "!SCANFILE!"
 reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 echo  SET: ADSKFLEX_LICENSE_FILE >> "!SCANFILE!"
+if !errorlevel! equ 0 (
+    set /a RS_OTHER+=1
+    echo  SET: ADSKFLEX_LICENSE_FILE >> "!SCANFILE!"
+)
 echo. >> "!SCANFILE!"
+if !RS_OTHER! gtr 0 (
+    echo !ESC![50G!CRED!!RS_OTHER! found                    !R!
+)
+if !RS_OTHER! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
 
-echo  ========================================================
-echo   !CGRN!!BOLD!SCAN COMPLETE!R!
-echo  ========================================================
+REM === SUMMARY TABLE ===
+set /a RS_TOTAL=RS_PROD+RS_PROC+RS_SVC+RS_PF+RS_DATA+RS_CDRIVE+RS_REG+RS_COM+RS_CLASS+RS_SHELL+RS_OTHER
 echo.
-echo  !CWHT!Results saved to:!R! !DIM!!SCANFILE!!R!
+echo  ============================================================
+echo   !CWHT!!BOLD!REMNANT SCAN COMPLETE - Summary!R!
+echo  ============================================================
 echo.
-echo  !CWHT!Full report:!R!
-echo  !DIM!--------------------------------------------------------!R!
-type "!SCANFILE!"
-echo  !DIM!--------------------------------------------------------!R!
+echo   !CWHT!Category                          Found!R!
+echo   !DIM!--------------------------------  --------!R!
+
+if !RS_PROD! gtr 0 ( <nul set /p "=  Registered products              !CRED!!RS_PROD!!R!" )
+if !RS_PROD! equ 0 ( <nul set /p "=  Registered products              !CGRN!0!R!" )
 echo.
-echo  !CYLW!========================================================!R!
-echo  !CYLW! NOTE: If you see GENERIC-ICON entries above, these     !R!
-echo  !CYLW! are !CWHT!NOT!R!!CYLW! Autodesk keys. They are standard Windows file  !R!
-echo  !CYLW! types whose icon path points to a deleted Autodesk     !R!
-echo  !CYLW! exe. Windows shows a generic icon instead.             !R!
-echo  !CYLW! They are !CGRN!completely harmless!R!!CYLW! and !CWHT!should NOT be deleted!R!!CYLW!. !R!
-echo  !CYLW!========================================================!R!
+if !RS_PROC! gtr 0 ( <nul set /p "=  Running processes                !CRED!!RS_PROC!!R!" )
+if !RS_PROC! equ 0 ( <nul set /p "=  Running processes                !CGRN!0!R!" )
+echo.
+if !RS_SVC! gtr 0 ( <nul set /p "=  Services                         !CRED!!RS_SVC!!R!" )
+if !RS_SVC! equ 0 ( <nul set /p "=  Services                         !CGRN!0!R!" )
+echo.
+if !RS_PF! gtr 0 ( <nul set /p "=  Program Files folders             !CRED!!RS_PF!!R!" )
+if !RS_PF! equ 0 ( <nul set /p "=  Program Files folders             !CGRN!0!R!" )
+echo.
+if !RS_DATA! gtr 0 ( <nul set /p "=  Data folders                     !CRED!!RS_DATA!!R!" )
+if !RS_DATA! equ 0 ( <nul set /p "=  Data folders                     !CGRN!0!R!" )
+echo.
+if !RS_CDRIVE! gtr 0 ( <nul set /p "=  C: drive Autodesk folders        !CRED!!RS_CDRIVE!!R!" )
+if !RS_CDRIVE! equ 0 ( <nul set /p "=  C: drive Autodesk folders        !CGRN!0!R!" )
+echo.
+if !RS_REG! gtr 0 ( <nul set /p "=  Registry hives                   !CRED!!RS_REG!!R!" )
+if !RS_REG! equ 0 ( <nul set /p "=  Registry hives                   !CGRN!0!R!" )
+echo.
+if !RS_COM! gtr 0 ( <nul set /p "=  COM objects ^(CLSID + TypeLib^)    !CRED!!RS_COM!!R!" )
+if !RS_COM! equ 0 ( <nul set /p "=  COM objects ^(CLSID + TypeLib^)    !CGRN!0!R!" )
+echo.
+if !RS_CLASS! gtr 0 ( <nul set /p "=  File association class keys      !CRED!!RS_CLASS!!R!" )
+if !RS_CLASS! equ 0 ( <nul set /p "=  File association class keys      !CGRN!0!R!" )
+echo.
+if !RS_SHELL! gtr 0 ( <nul set /p "=  Shell extensions + uninstall reg !CRED!!RS_SHELL!!R!" )
+if !RS_SHELL! equ 0 ( <nul set /p "=  Shell extensions + uninstall reg !CGRN!0!R!" )
+echo.
+if !RS_OTHER! gtr 0 ( <nul set /p "=  Shortcuts, tasks, env vars       !CRED!!RS_OTHER!!R!" )
+if !RS_OTHER! equ 0 ( <nul set /p "=  Shortcuts, tasks, env vars       !CGRN!0!R!" )
+echo.
+echo   !DIM!--------------------------------  --------!R!
+if !RS_TOTAL! gtr 0 ( <nul set /p "=  !CWHT!!BOLD!TOTAL                             !CRED!!BOLD!!RS_TOTAL!!R!" )
+if !RS_TOTAL! equ 0 ( <nul set /p "=  !CWHT!!BOLD!TOTAL                             !CGRN!!BOLD!0!R!" )
+echo.
+if !RS_GENERIC! gtr 0 (
+    echo.
+    echo   !DIM!+ !RS_GENERIC! GENERIC-ICON entries ^(informational only, not counted^)!R!
+)
+echo.
+echo  !CWHT!Full details saved to:!R!
+echo  !DIM!!SCANFILE!!R!
+echo.
+echo  !CYLW!NOTE:!R! GENERIC-ICON entries in the log are !CWHT!NOT!R! Autodesk keys.
+echo  !DIM!They are standard Windows file types whose icon path points!R!
+echo  !DIM!to a deleted Autodesk exe. Completely harmless. Do NOT delete.!R!
+echo  ============================================================
+echo.
+pause
+goto :main_menu
+
+REM ============================================================
+REM FULL SYSTEM AUDIT - Preview everything that will be removed
+REM ============================================================
+:full_audit
+cls
+echo.
+echo  !CCYN!============================================================!R!
+echo  !CCYN!  !BOLD!!CWHT!  FULL SYSTEM AUDIT - Autodesk Footprint Analysis    !R!
+echo  !CCYN!  !DIM!  Shows EVERYTHING that would be removed by a Full Clean !R!
+echo  !CCYN!  !DIM!  Read-only - no changes are made to your system         !R!
+echo  !CCYN!============================================================!R!
+echo.
+set "AUDITFILE=!LOGDIR!\system_audit.txt"
+echo ============================================================ > "!AUDITFILE!"
+echo  AUTODESK SYSTEM AUDIT - %date% %time% >> "!AUDITFILE!"
+echo  Computer: %COMPUTERNAME%  User: %USERNAME% >> "!AUDITFILE!"
+echo  This is a READ-ONLY scan. Nothing was modified. >> "!AUDITFILE!"
+echo ============================================================ >> "!AUDITFILE!"
+echo. >> "!AUDITFILE!"
+set AUDIT_TOTAL=0
+echo  !DIM!This scan checks 13 categories and may take 1-2 minutes.!R!
+echo  !DIM!A live counter shows progress for each step.!R!
+echo  !DIM!Please wait...!R!
+echo.
+
+REM === 1. INSTALLED PRODUCTS ===
+<nul set /p "=  !CWHT![ 1/13]!R! Installed products............... "
+set AU_PROD=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  1. INSTALLED AUTODESK PRODUCTS >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "AU_PUB="
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "Publisher" 2^>nul ^| findstr /i "Publisher"') do set "AU_PUB=%%b"
+    if defined AU_PUB (
+        echo "!AU_PUB!" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 (
+            set /a AU_PROD+=1
+            <nul set /p "=!ESC![50G!DIM!scanning: !AU_PROD!  !R!"
+            for /f "tokens=2,*" %%a in ('reg query "%%k" /v "DisplayName" 2^>nul ^| findstr /i "DisplayName"') do echo   [!AU_PROD!] %%b >> "!AUDITFILE!"
+            for /f "tokens=2,*" %%a in ('reg query "%%k" /v "UninstallString" 2^>nul ^| findstr /i "UninstallString"') do echo        Uninstall: %%b >> "!AUDITFILE!"
+        )
+    )
+)
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "AU_PUB="
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "Publisher" 2^>nul ^| findstr /i "Publisher"') do set "AU_PUB=%%b"
+    if defined AU_PUB (
+        echo "!AU_PUB!" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 (
+            set /a AU_PROD+=1
+            <nul set /p "=!ESC![50G!DIM!scanning: !AU_PROD!  !R!"
+            for /f "tokens=2,*" %%a in ('reg query "%%k" /v "DisplayName" 2^>nul ^| findstr /i "DisplayName"') do echo   [!AU_PROD!] %%b ^(32-bit^) >> "!AUDITFILE!"
+        )
+    )
+)
+set /a AUDIT_TOTAL+=AU_PROD
+if !AU_PROD! gtr 0 (
+    echo !ESC![50G!CRED!!AU_PROD! found                    !R!
+    echo  TOTAL: !AU_PROD! products >> "!AUDITFILE!"
+)
+if !AU_PROD! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 2. RUNNING PROCESSES ===
+<nul set /p "=  !CWHT![ 2/13]!R! Running processes................ "
+set AU_PROC=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  2. RUNNING AUTODESK PROCESSES >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=1,2" %%a in ('wmic process where "ExecutablePath like '%%Autodesk%%'" get Name^,ProcessId 2^>nul ^| findstr /i ".exe"') do (
+    set /a AU_PROC+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_PROC!  !R!"
+    echo   %%a  ^(PID: %%b^) >> "!AUDITFILE!"
+)
+for %%p in (AdSSO.exe AdskLicensingService.exe AdskAccessService.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe) do (
+    tasklist /fi "imagename eq %%p" 2>nul | findstr /i "%%p" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a AU_PROC+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_PROC!  !R!"
+        echo   %%p >> "!AUDITFILE!"
+    )
+)
+set /a AUDIT_TOTAL+=AU_PROC
+if !AU_PROC! gtr 0 (
+    echo !ESC![50G!CRED!!AU_PROC! found                    !R!
+    echo  TOTAL: !AU_PROC! processes >> "!AUDITFILE!"
+)
+if !AU_PROC! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None running. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 3. SERVICES ===
+<nul set /p "=  !CWHT![ 3/13]!R! Services......................... "
+set AU_SVC=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  3. AUTODESK SERVICES >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+    sc query %%s >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a AU_SVC+=1
+        for /f "tokens=3,4" %%a in ('sc query %%s 2^>nul ^| findstr /i "STATE"') do echo   %%s  [%%a %%b] >> "!AUDITFILE!"
+    )
+)
+set /a AUDIT_TOTAL+=AU_SVC
+if !AU_SVC! gtr 0 (
+    echo !ESC![50G!CRED!!AU_SVC! found                    !R!
+    echo  TOTAL: !AU_SVC! services >> "!AUDITFILE!"
+)
+if !AU_SVC! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 4. FOLDERS WITH FILE COUNTS ===
+<nul set /p "=  !CWHT![ 4/13]!R! Folders and files................ "
+set AU_FOLD=0
+set AU_FILES=0
+set "AU_SIZE_PATHS="
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  4. AUTODESK FOLDERS AND FILES >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for %%d in (
+    "C:\Program Files\Autodesk"
+    "C:\Program Files\Common Files\Autodesk Shared"
+    "C:\Program Files\Common Files\Autodesk"
+    "C:\Program Files (x86)\Autodesk"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared"
+    "C:\Program Files (x86)\Common Files\Autodesk"
+    "C:\ProgramData\Autodesk"
+    "C:\Users\Public\Documents\Autodesk"
+    "C:\Autodesk"
+    "C:\Program Files\Common Files\Macrovision Shared"
+    "%APPDATA%\Autodesk"
+    "%LOCALAPPDATA%\Autodesk"
+    "%LOCALAPPDATA%\Programs\Autodesk"
+    "%LOCALAPPDATA%\Temp\odis_download_dest"
+    "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk"
+) do (
+    if exist "%%~d" (
+        set /a AU_FOLD+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !AU_FOLD!  !R!"
+        set FC=0
+        set "FSIZE_LINE="
+        for /f %%n in ('dir /s /b "%%~d" 2^>nul ^| find /c /v ""') do set FC=%%n
+        for /f "tokens=3,4" %%a in ('dir /s /-c "%%~d" 2^>nul ^| findstr /c:"File(s)"') do set "FSIZE_LINE=%%a bytes"
+        set /a AU_FILES+=FC
+        echo   EXISTS: %%~d  [!FC! files, !FSIZE_LINE!] >> "!AUDITFILE!"
+        set "AU_SIZE_PATHS=!AU_SIZE_PATHS!'%%~d',"
+    )
+)
+REM Calculate total disk space using PowerShell (handles large numbers)
+set "AU_TOTAL_SIZE=calculating..."
+if !AU_FOLD! gtr 0 (
+    for /f "tokens=*" %%s in ('powershell -NoProfile -Command "$p=@(!AU_SIZE_PATHS!$null); $t=0; foreach($d in $p){if($d -and (Test-Path $d)){try{$t+=(Get-ChildItem $d -Recurse -Force -ErrorAction SilentlyContinue|Measure-Object Length -Sum).Sum}catch{}}}; if($t -gt 1073741824){'{0:N2} GB' -f ($t/1GB)}elseif($t -gt 1048576){'{0:N0} MB' -f ($t/1MB)}else{'{0:N0} KB' -f ($t/1KB)}" 2^>nul') do set "AU_TOTAL_SIZE=%%s"
+)
+set /a AUDIT_TOTAL+=AU_FOLD
+if !AU_FOLD! gtr 0 (
+    echo !ESC![50G!CRED!!AU_FOLD! folders, !AU_FILES! files       !R!
+)
+if !AU_FOLD! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 5. C: DRIVE SEARCH ===
+<nul set /p "=  !CWHT![ 5/13]!R! Other Autodesk folders on C:..... "
+set AU_OTHER=0
+set AU_INSTALLER=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  5. OTHER AUTODESK FOLDERS ON C: DRIVE >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  5a. Product remnants: >> "!AUDITFILE!"
+for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /v /i "Desktop\\Autodesk_Uninstaller"') do (
+    set "AU_IS_INSTALLER=0"
+    echo "%%p" | findstr /i "\\Downloads\\" >nul 2>&1
+    if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
+    echo "%%p" | findstr /i "\\Google\\Chrome\\" >nul 2>&1
+    if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
+    echo "%%p" | findstr /i "\\Edge\\User Data\\" >nul 2>&1
+    if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
+    echo "%%p" | findstr /i "\\Firefox\\Profiles\\" >nul 2>&1
+    if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
+    if !AU_IS_INSTALLER! equ 0 (
+        set /a AU_OTHER+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !AU_OTHER!  !R!"
+        echo   %%p >> "!AUDITFILE!"
+    )
+    if !AU_IS_INSTALLER! equ 1 (
+        set /a AU_INSTALLER+=1
+    )
+)
+if !AU_OTHER! equ 0 echo  None found. >> "!AUDITFILE!"
+echo. >> "!AUDITFILE!"
+REM --- 5b. Installer files (for/f with pipe must be outside if blocks) ---
+set "AU_WROTE_5B=0"
+set "AU_SKIP_5B=0"
+if !AU_INSTALLER! equ 0 set "AU_SKIP_5B=1"
+for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /i "\\Downloads\\ \\Google\\Chrome\\ \\Edge\\User Data\\ \\Firefox\\Profiles\\"') do (
+    if !AU_SKIP_5B! equ 0 (
+        if !AU_WROTE_5B! equ 0 echo  5b. Installation files and browser cache [OPTIONAL]: >> "!AUDITFILE!"
+        set "AU_WROTE_5B=1"
+        echo   %%p >> "!AUDITFILE!"
+    )
+)
+if !AU_WROTE_5B! equ 1 (
+    echo  NOTE: These are downloaded installers and browser >> "!AUDITFILE!"
+    echo  cache - NOT installed product files. They are only >> "!AUDITFILE!"
+    echo  cleaned if you choose to include them. >> "!AUDITFILE!"
+    echo. >> "!AUDITFILE!"
+)
+REM --- Display result (flattened: no nested ifs) ---
+set "AU_STEP5_SHOWN=0"
+set "AU_BOTH=0"
+if !AU_OTHER! gtr 0 set "AU_BOTH=1"
+if !AU_BOTH! equ 1 if !AU_INSTALLER! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_OTHER! remnants + !AU_INSTALLER! installer    !R!
+    set "AU_STEP5_SHOWN=1"
+)
+if !AU_OTHER! gtr 0 if !AU_STEP5_SHOWN! equ 0 (
+    echo !ESC![50G!CYLW!!AU_OTHER! found                    !R!
+    set "AU_STEP5_SHOWN=1"
+)
+if !AU_OTHER! gtr 0 (
+    echo  TOTAL: !AU_OTHER! remnant folders, !AU_INSTALLER! installer/browser folders >> "!AUDITFILE!"
+)
+if !AU_OTHER! equ 0 if !AU_INSTALLER! gtr 0 (
+    echo !ESC![50G!CGRN!no remnants !DIM!^(!AU_INSTALLER! installer^)   !R!
+    set "AU_STEP5_SHOWN=1"
+)
+if !AU_STEP5_SHOWN! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 6. REGISTRY HIVES ===
+<nul set /p "=  !CWHT![ 6/13]!R! Registry hives................... "
+set AU_REG=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  6. AUTODESK REGISTRY HIVES >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for %%k in (
+    "HKLM\SOFTWARE\Autodesk"
+    "HKCU\SOFTWARE\Autodesk"
+    "HKLM\SOFTWARE\WOW6432Node\Autodesk"
+    "HKLM\SOFTWARE\FLEXlm License Manager"
+    "HKCU\SOFTWARE\FLEXlm License Manager"
+    "HKLM\SOFTWARE\WOW6432Node\FLEXlm License Manager"
+    "HKLM\SOFTWARE\Macrovision"
+) do (
+    reg query %%k >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a AU_REG+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !AU_REG!  !R!"
+        set SUBKEYS=0
+        for /f %%n in ('reg query %%k /s 2^>nul ^| find /c "HKEY_"') do set SUBKEYS=%%n
+        echo   EXISTS: %%~k  [!SUBKEYS! subkeys] >> "!AUDITFILE!"
+    )
+)
+set /a AUDIT_TOTAL+=AU_REG
+if !AU_REG! gtr 0 (
+    echo !ESC![50G!CRED!!AU_REG! hives                    !R!
+)
+if !AU_REG! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 7. USER FILE ASSOCIATIONS ===
+<nul set /p "=  !CWHT![ 7/13]!R! User file associations........... "
+set AU_ASSOC=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  7. USER FILE ASSOCIATIONS (HKCU\Classes) >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a AU_ASSOC+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_ASSOC!  !R!"
+    echo   %%k >> "!AUDITFILE!"
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a AU_ASSOC+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_ASSOC!  !R!"
+    echo   %%k >> "!AUDITFILE!"
+)
+for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile .dgn) do (
+    reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a AU_ASSOC+=1
+        echo   HKCU\SOFTWARE\Classes\%%n >> "!AUDITFILE!"
+    )
+)
+reg query "HKCU\SOFTWARE\Classes\dwgviewr.9128.409" >nul 2>&1
+if !errorlevel! equ 0 (
+    set /a AU_ASSOC+=1
+    echo   HKCU\SOFTWARE\Classes\dwgviewr.9128.409 >> "!AUDITFILE!"
+)
+set /a AUDIT_TOTAL+=AU_ASSOC
+if !AU_ASSOC! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_ASSOC! entries                  !R!
+    echo  TOTAL: !AU_ASSOC! class entries >> "!AUDITFILE!"
+)
+if !AU_ASSOC! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 8. COM OBJECTS AND CLSID ===
+<nul set /p "=  !CWHT![ 8/13]!R! COM objects and CLSIDs........... "
+set AU_COM=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  8. COM OBJECTS AND CLSIDs >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a AU_COM+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_COM!  !R!"
+    echo   CLSID: %%k >> "!AUDITFILE!"
+)
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
+    set /a AU_COM+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_COM!  !R!"
+    echo   TypeLib: %%k >> "!AUDITFILE!"
+)
+for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autodesk" /d 2^>nul ^| findstr /i "HKEY_.*CLSID.*{"') do (
+    set /a AU_COM+=1
+    <nul set /p "=!ESC![50G!DIM!scanning: !AU_COM!  !R!"
+    echo   User CLSID: %%k >> "!AUDITFILE!"
+)
+set /a AUDIT_TOTAL+=AU_COM
+if !AU_COM! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_COM! entries                  !R!
+    echo  TOTAL: !AU_COM! COM entries >> "!AUDITFILE!"
+)
+if !AU_COM! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 9. SCHEDULED TASKS ===
+<nul set /p "=  !CWHT![ 9/13]!R! Scheduled tasks.................. "
+set AU_TASK=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  9. SCHEDULED TASKS >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a AU_TASK+=1
+    echo   %%~n >> "!AUDITFILE!"
+)
+set /a AUDIT_TOTAL+=AU_TASK
+if !AU_TASK! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_TASK! found                    !R!
+)
+if !AU_TASK! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 10. FIREWALL RULES ===
+<nul set /p "=  !CWHT![10/13]!R! Firewall rules................... "
+set AU_FW=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  10. FIREWALL RULES >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
+    set /a AU_FW+=1
+    echo   %%r >> "!AUDITFILE!"
+)
+set /a AUDIT_TOTAL+=AU_FW
+if !AU_FW! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_FW! rules                     !R!
+)
+if !AU_FW! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 11. SHORTCUTS ===
+<nul set /p "=  !CWHT![11/13]!R! Shortcuts........................ "
+set AU_SC=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  11. SHORTCUTS (Desktop, Start Menu, Taskbar) >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
+    if exist "%%~L" (
+        for %%f in ("%%~L\*.lnk") do (
+            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max Maya Navisworks" >nul 2>&1
+            if !errorlevel! equ 0 (
+                set /a AU_SC+=1
+                echo   Desktop: %%~nf >> "!AUDITFILE!"
+            )
+        )
+    )
+)
+if exist "%APPDATA%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
+    set /a AU_SC+=1
+    echo   Start Menu: User\Autodesk folder >> "!AUDITFILE!"
+)
+if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
+    set /a AU_SC+=1
+    echo   Start Menu: All Users\Autodesk folder >> "!AUDITFILE!"
+)
+for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar") do (
+    if exist "%%~T" (
+        for %%f in ("%%~T\*.lnk") do (
+            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG 3ds Max" >nul 2>&1
+            if !errorlevel! equ 0 (
+                set /a AU_SC+=1
+                echo   Taskbar: %%~nf >> "!AUDITFILE!"
+            )
+        )
+    )
+)
+set /a AUDIT_TOTAL+=AU_SC
+if !AU_SC! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_SC! found                    !R!
+)
+if !AU_SC! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 12. ENVIRONMENT VARIABLES ===
+<nul set /p "=  !CWHT![12/13]!R! Environment variables............ "
+set AU_ENV=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  12. ENVIRONMENT VARIABLES >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
+if !errorlevel! equ 0 (
+    set /a AU_ENV+=1
+    for /f "tokens=2,*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" 2^>nul ^| findstr /i "ADSKFLEX"') do echo   ADSKFLEX_LICENSE_FILE = %%b >> "!AUDITFILE!"
+)
+set /a AUDIT_TOTAL+=AU_ENV
+if !AU_ENV! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_ENV! set                      !R!
+)
+if !AU_ENV! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === 13. SHELL EXTENSIONS ===
+<nul set /p "=  !CWHT![13/13]!R! Shell extensions.................. "
+set AU_SHELL=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  13. SHELL EXTENSIONS >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for %%x in (
+    "C:\Program Files\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
+    "C:\Program Files\Common Files\Autodesk Shared\DwfShellEx\DwfShellExtension.dll"
+    "C:\Program Files (x86)\Common Files\Autodesk Shared\DwfShellEx\DwfShellExtension.dll"
+) do (
+    if exist %%x (
+        set /a AU_SHELL+=1
+        echo   EXISTS: %%~x >> "!AUDITFILE!"
+    )
+)
+for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s 2^>nul ^| findstr /i "Autodesk"') do (
+    set /a AU_SHELL+=1
+    echo   Approved: %%b >> "!AUDITFILE!"
+)
+set /a AUDIT_TOTAL+=AU_SHELL
+if !AU_SHELL! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_SHELL! found                    !R!
+)
+if !AU_SHELL! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+    echo  None found. >> "!AUDITFILE!"
+)
+echo. >> "!AUDITFILE!"
+
+REM === SUMMARY ===
+echo.
+echo  !CCYN!============================================================!R!
+echo ============================================================ >> "!AUDITFILE!"
+if !AUDIT_TOTAL! equ 0 (
+    echo  !CGRN!!BOLD!  SYSTEM IS CLEAN - No Autodesk footprint detected.    !R!
+    echo   SYSTEM IS CLEAN - No Autodesk footprint detected. >> "!AUDITFILE!"
+)
+if !AUDIT_TOTAL! gtr 0 (
+    echo  !CWHT!!BOLD!  TOTAL: !AUDIT_TOTAL! Autodesk items found on this system.    !R!
+    echo   TOTAL: !AUDIT_TOTAL! Autodesk items found on this system. >> "!AUDITFILE!"
+    if !AU_FOLD! gtr 0 (
+        echo  !CYLW!!BOLD!  Disk space used: !AU_TOTAL_SIZE!                            !R!
+        echo   Disk space used: !AU_TOTAL_SIZE! >> "!AUDITFILE!"
+    )
+    echo.
+    echo  !DIM!  Use option [3] Full Uninstall + Deep Clean to remove all.!R!
+    echo  !DIM!  Use option [4] Deep Clean Only for remnant-only removal. !R!
+    echo   Use [3] Full Uninstall or [4] Deep Clean to remove. >> "!AUDITFILE!"
+)
+echo  !CCYN!============================================================!R!
+echo ============================================================ >> "!AUDITFILE!"
+if !AU_INSTALLER! gtr 0 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! !BOLD!!CWHT!NOTE:!R!!CYLW! !AU_INSTALLER! Autodesk installer/download folders found.    !R!
+    echo  !CYLW! These are !CWHT!installation packages!R!!CYLW!, not installed products. !R!
+    echo  !CYLW! Examples: downloaded setup files, browser cache.          !R!
+    echo  !CYLW! They are !CWHT!NOT!R!!CYLW! included in automatic cleanup.                !R!
+    echo  !CYLW! Options [3] and [4] will ask if you want to remove them. !R!
+    echo  !CYLW!============================================================!R!
+)
+echo.
+echo  !CWHT!Full report saved to:!R! !DIM!!AUDITFILE!!R!
+echo.
+pause
+goto :main_menu
+
+REM ============================================================
+REM FIX ERROR 103 - ODIS INSTALLER DIAGNOSTICS AND REPAIR
+REM ============================================================
+:fix_error103
+cls
+echo.
+echo  !CCYN!============================================================!R!
+echo  !CCYN!  !BOLD!!CWHT!  FIX ERROR 103 - ODIS INSTALLER REPAIR             !R!
+echo  !CCYN!============================================================!R!
+echo.
+echo  !DIM!Autodesk "Error 103" occurs when ODIS installer components!R!
+echo  !DIM!are corrupted, blocked, or misconfigured.!R!
+echo.
+echo  !CWHT!Phase 1: Diagnosis!R! - scanning for known issues...
+echo.
+set "E103_ISSUES=0"
+set "E103_FIXES=0"
+set "E103LOG=!LOGDIR!\error103_log.txt"
+type nul > "!E103LOG!"
+echo ERROR 103 DIAGNOSTIC LOG >> "!E103LOG!"
+echo Date: %date% %time% >> "!E103LOG!"
+echo ================================================ >> "!E103LOG!"
+
+REM --- Check 1: ODIS lock file ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![1/9]!R! ODIS lock file................ "
+set "E103_LOCK=0"
+set "E103_LOCKFILE=C:\ProgramData\Autodesk\ODIS\AdODISInstaller.run.lock"
+if exist "!E103_LOCKFILE!" (
+    set "E103_LOCK=1"
+    set /a E103_ISSUES+=1
+    echo !CRED!FOUND!R! - installer may be stuck
+    echo  [1] ODIS lock file: FOUND at !E103_LOCKFILE! >> "!E103LOG!"
+)
+if not exist "!E103_LOCKFILE!" (
+    echo !CGRN!OK!R! - no lock file
+    echo  [1] ODIS lock file: CLEAN >> "!E103LOG!"
+)
+
+REM --- Check 2: Debugger keys in IFEO ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![2/9]!R! Debugger keys ^(IFEO^)......... "
+set "E103_IFEO=0"
+set "E103_IFEO_LIST="
+set "IFEO_ROOT=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
+for %%x in (Installer.exe AdskAccessServiceHost.exe AdSSO.exe AdskLicensingService.exe) do (
+    reg query "!IFEO_ROOT!\%%x" /v Debugger >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a E103_IFEO+=1
+        set "E103_IFEO_LIST=!E103_IFEO_LIST! %%x"
+        echo  [2] Debugger key FOUND: %%x >> "!E103LOG!"
+    )
+)
+if !E103_IFEO! gtr 0 (
+    set /a E103_ISSUES+=1
+    echo !CRED!!E103_IFEO! BLOCKED!R! -!E103_IFEO_LIST!
+)
+if !E103_IFEO! equ 0 (
+    echo !CGRN!OK!R! - no debugger redirects
+    echo  [2] Debugger keys ^(IFEO^): CLEAN >> "!E103LOG!"
+)
+
+REM --- Check 3: Autodesk Access and ODIS version ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![3/9]!R! Autodesk Access version...... "
+set "E103_AA_VER=NOT INSTALLED"
+set "E103_ODIS_VER=NOT INSTALLED"
+REM Query Autodesk Access version via PowerShell (file version)
+set "E103_AA_EXE=C:\Program Files\Autodesk\AdODIS\V1\Setup\AdskAccessServiceHost.exe"
+for /f "tokens=*" %%v in ('powershell -NoProfile -Command "if(Test-Path '!E103_AA_EXE!'){(Get-Item '!E103_AA_EXE!').VersionInfo.ProductVersion}" 2^>nul') do set "E103_AA_VER=%%v"
+REM Query ODIS Installer version
+set "E103_ODIS_EXE=C:\Program Files\Autodesk\AdODIS\V1\Installer.exe"
+for /f "tokens=*" %%v in ('powershell -NoProfile -Command "if(Test-Path '!E103_ODIS_EXE!'){(Get-Item '!E103_ODIS_EXE!').VersionInfo.ProductVersion}" 2^>nul') do set "E103_ODIS_VER=%%v"
+set "E103_VER_OK=1"
+if "!E103_AA_VER!"=="NOT INSTALLED" set "E103_VER_OK=0"
+if !E103_VER_OK! equ 1 (
+    echo !CGRN!!E103_AA_VER!!R!
+    echo  [3] Autodesk Access: !E103_AA_VER! >> "!E103LOG!"
+)
+if !E103_VER_OK! equ 0 (
+    echo !CYLW!NOT INSTALLED!R!
+    echo  [3] Autodesk Access: NOT INSTALLED >> "!E103LOG!"
+)
+echo       !DIM!ODIS Installer version....... !E103_ODIS_VER!!R!
+echo  [3] ODIS Installer: !E103_ODIS_VER! >> "!E103LOG!"
+
+REM --- Check 4: AdskAccessServiceHost service ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![4/9]!R! AdskAccessServiceHost........ "
+set "E103_SVC=0"
+set "E103_SVC_STATE=UNKNOWN"
+sc query AdskAccessServiceHost >nul 2>&1
+set "E103_SC_ERR=!errorlevel!"
+if !E103_SC_ERR! neq 0 (
+    set "E103_SVC=2"
+    echo !CYLW!NOT INSTALLED!R!
+    echo  [4] AdskAccessServiceHost: NOT INSTALLED >> "!E103LOG!"
+)
+if !E103_SC_ERR! equ 0 (
+    set "E103_SVC=1"
+)
+REM for/f with pipe must be outside if blocks - use flag to gate output
+for /f "tokens=3" %%s in ('sc query AdskAccessServiceHost ^| findstr "STATE"') do set "E103_SVC_STATE=%%s"
+if !E103_SVC! equ 1 if "!E103_SVC_STATE!"=="4" (
+    set "E103_SVC=0"
+    echo !CGRN!RUNNING!R!
+    echo  [4] AdskAccessServiceHost: RUNNING >> "!E103LOG!"
+)
+if !E103_SVC! equ 1 if "!E103_SVC_STATE!" neq "4" (
+    set /a E103_ISSUES+=1
+    echo !CRED!STOPPED!R! - service not running
+    echo  [4] AdskAccessServiceHost: STOPPED ^(state=!E103_SVC_STATE!^) >> "!E103LOG!"
+)
+
+REM --- Check 5: ODIS infrastructure ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![5/9]!R! ODIS infrastructure.......... "
+set "E103_ODIS=0"
+set "E103_ODIS_MSG="
+if not exist "C:\Program Files\Autodesk\AdODIS\V1\Installer.exe" (
+    set "E103_ODIS=1"
+    set "E103_ODIS_MSG=Installer.exe MISSING"
+    echo  [5] ODIS Installer.exe: MISSING >> "!E103LOG!"
+)
+if exist "C:\Program Files\Autodesk\AdODIS\V1\Installer.exe" (
+    echo  [5] ODIS Installer.exe: EXISTS >> "!E103LOG!"
+)
+if not exist "C:\ProgramData\Autodesk\ODIS" (
+    set "E103_ODIS=1"
+    set "E103_ODIS_MSG=!E103_ODIS_MSG! ODIS folder MISSING"
+    echo  [5] ODIS data folder: MISSING >> "!E103LOG!"
+)
+if exist "C:\ProgramData\Autodesk\ODIS" (
+    echo  [5] ODIS data folder: EXISTS >> "!E103LOG!"
+)
+if !E103_ODIS! gtr 0 (
+    set /a E103_ISSUES+=1
+    echo !CRED!DAMAGED!R! - !E103_ODIS_MSG!
+)
+if !E103_ODIS! equ 0 (
+    echo !CGRN!OK!R! - ODIS files present
+)
+
+REM --- Check 6: ProductInformation.pit ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![6/9]!R! ProductInformation.pit....... "
+set "E103_PIT=0"
+set "E103_PITFILE=%LOCALAPPDATA%\Autodesk\Web Services\ProductInformation.pit"
+if exist "!E103_PITFILE!" (
+    set "E103_PIT=1"
+    set /a E103_ISSUES+=1
+    for %%f in ("!E103_PITFILE!") do set "E103_PIT_SIZE=%%~zf"
+    echo !CYLW!EXISTS!R! !DIM!^(!E103_PIT_SIZE! bytes - may be corrupted^)!R!
+    echo  [6] ProductInformation.pit: EXISTS ^(!E103_PIT_SIZE! bytes^) >> "!E103LOG!"
+)
+if not exist "!E103_PITFILE!" (
+    echo !CGRN!OK!R! - not present ^(will regenerate^)
+    echo  [6] ProductInformation.pit: NOT PRESENT >> "!E103LOG!"
+)
+
+REM --- Check 7: TMP/TEMP paths ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![7/9]!R! TMP/TEMP paths............... "
+set "E103_TEMP=0"
+set "E103_TEMP_OK=1"
+echo "!TEMP!" | findstr /i "\\AppData\\Local\\Temp" >nul 2>&1
+if !errorlevel! neq 0 (
+    set "E103_TEMP=1"
+    set "E103_TEMP_OK=0"
+    set /a E103_ISSUES+=1
+)
+if !E103_TEMP_OK! equ 1 (
+    echo !CGRN!OK!R! - !DIM!!TEMP!!R!
+    echo  [7] TEMP path: OK ^(!TEMP!^) >> "!E103LOG!"
+)
+if !E103_TEMP_OK! equ 0 (
+    echo !CRED!NON-DEFAULT!R! - !TEMP!
+    echo  [7] TEMP path: NON-DEFAULT ^(!TEMP!^) >> "!E103LOG!"
+)
+
+REM --- Check 8: Visual C++ Redistributables ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![8/9]!R! Visual C++ Redistributables.. "
+set "E103_VC=0"
+set "E103_VC_COUNT=0"
+for /f "tokens=*" %%r in ('reg query "HKLM\SOFTWARE\Microsoft\VisualStudio\14.0\VC\Runtimes\x64" /v Major 2^>nul') do (
+    set /a E103_VC_COUNT+=1
+)
+if !E103_VC_COUNT! equ 0 (
+    set "E103_VC=1"
+    set /a E103_ISSUES+=1
+    echo !CRED!NOT FOUND!R! - VC++ 2015-2022 x64 missing
+    echo  [8] VC++ Redistributable x64: NOT FOUND >> "!E103LOG!"
+)
+if !E103_VC_COUNT! gtr 0 (
+    echo !CGRN!OK!R! - VC++ 2015-2022 x64 installed
+    echo  [8] VC++ Redistributable x64: INSTALLED >> "!E103LOG!"
+)
+
+REM --- Check 9: Windows Event Viewer ---
+set "E103_T=!time:~0,8!"
+<nul set /p "=  !DIM![!E103_T!]!R! !CWHT![9/9]!R! Windows Event Viewer......... "
+set "E103_EVT=0"
+set "E103_EVTTMP=!LOGDIR!\e103_evt_tmp.txt"
+type nul > "!E103_EVTTMP!"
+powershell -NoProfile -Command "Get-WinEvent -FilterHashtable @{LogName='Application'; Level=2; StartTime=(Get-Date).AddDays(-7)} -ErrorAction SilentlyContinue | Where-Object {$_.Message -match 'Autodesk|ODIS|AdskAccess|AdODIS|MsiInstaller.*Autodesk'} | Select-Object -First 10 TimeCreated, Id, Message | ForEach-Object { '{0} EventID={1} {2}' -f $_.TimeCreated.ToString('yyyy-MM-dd HH:mm'), $_.Id, ($_.Message -split '`n')[0].Substring(0,[Math]::Min(120,($_.Message -split '`n')[0].Length)) }" > "!E103_EVTTMP!" 2>nul
+for /f "tokens=*" %%e in ('type "!E103_EVTTMP!" 2^>nul') do set /a E103_EVT+=1
+if !E103_EVT! gtr 0 (
+    set /a E103_ISSUES+=1
+    echo !CYLW!!E103_EVT! Autodesk errors in last 7 days!R!
+    echo  [9] Event Viewer: !E103_EVT! Autodesk errors in last 7 days >> "!E103LOG!"
+    echo  [9] Recent errors: >> "!E103LOG!"
+    set "E103_EVT_SHOWN=0"
+    for /f "tokens=*" %%e in ('type "!E103_EVTTMP!" 2^>nul') do (
+        if !E103_EVT_SHOWN! lss 5 echo       %%e >> "!E103LOG!"
+        set /a E103_EVT_SHOWN+=1
+    )
+)
+if !E103_EVT! equ 0 (
+    echo !CGRN!OK!R! - no Autodesk errors in last 7 days
+    echo  [9] Event Viewer: CLEAN ^(no Autodesk errors in 7 days^) >> "!E103LOG!"
+)
+
+REM --- Diagnosis Summary ---
+echo.
+echo  !CCYN!------------------------------------------------------------!R!
+echo  DIAGNOSIS COMPLETE: >> "!E103LOG!"
+if !E103_ISSUES! equ 0 (
+    echo  !CGRN!!BOLD!  No issues found!!R! Error 103 may have another cause.
+    echo  No issues found. >> "!E103LOG!"
+    echo.
+    echo  !DIM!Suggestions:!R!
+    echo    - Reboot and try the installation again
+    echo    - Run Event Viewer ^> Application log, filter by "Autodesk"
+    echo.
+    echo  !CWHT!Log saved to:!R! !DIM!!E103LOG!!R!
+    del /f "!E103_EVTTMP!" >nul 2>&1
+    echo.
+    pause
+    goto :main_menu
+)
+echo  !CYLW!!BOLD!  !E103_ISSUES! issue^(s^) found.!R!
+echo  !E103_ISSUES! issue^(s^) found. >> "!E103LOG!"
+echo.
+echo  !CWHT!Phase 2: Repair!R! - fix each issue individually
+echo  !DIM!You will be asked to confirm each repair.!R!
+echo.
+echo ================================================ >> "!E103LOG!"
+echo REPAIRS: >> "!E103LOG!"
+
+REM === Repair 1: ODIS lock file ===
+if !E103_LOCK! equ 1 (
+    echo  !CCYN![Fix 1]!R! !CWHT!Delete ODIS lock file!R!
+    echo    !DIM!!E103_LOCKFILE!!R!
+    set /p "E103_R1=  Apply fix? [Y/N]: "
+    if /i "!E103_R1!"=="Y" del /f "!E103_LOCKFILE!" >nul 2>&1
+    if /i "!E103_R1!"=="Y" set /a E103_FIXES+=1
+    if /i "!E103_R1!"=="Y" echo    !CGRN!Deleted.!R!
+    if /i "!E103_R1!"=="Y" echo  [Fix 1] Lock file: DELETED >> "!E103LOG!"
+    if /i "!E103_R1!" neq "Y" echo    !CYLW!Skipped.!R!
+    if /i "!E103_R1!" neq "Y" echo  [Fix 1] Lock file: SKIPPED >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 2: Debugger keys ===
+if !E103_IFEO! gtr 0 (
+    echo  !CCYN![Fix 2]!R! !CWHT!Remove !E103_IFEO! debugger key^(s^)!R!
+    echo    !DIM!Keys blocking:!E103_IFEO_LIST!!R!
+    set /p "E103_R2=  Apply fix? [Y/N]: "
+)
+set "E103_R2_APPLIED=0"
+if !E103_IFEO! gtr 0 if /i "!E103_R2!"=="Y" set "E103_R2_APPLIED=1"
+if !E103_R2_APPLIED! equ 1 (
+    for %%x in (Installer.exe AdskAccessServiceHost.exe AdSSO.exe AdskLicensingService.exe) do (
+        reg query "!IFEO_ROOT!\%%x" /v Debugger >nul 2>&1
+        if !errorlevel! equ 0 reg delete "!IFEO_ROOT!\%%x" /v Debugger /f >nul 2>&1
+    )
+    set /a E103_FIXES+=1
+    echo    !CGRN!Debugger keys removed.!R!
+    echo  [Fix 2] Debugger keys: REMOVED >> "!E103LOG!"
+    echo.
+)
+if !E103_IFEO! gtr 0 if /i "!E103_R2!" neq "Y" (
+    echo    !CYLW!Skipped.!R!
+    echo  [Fix 2] Debugger keys: SKIPPED >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 3: Restart AdskAccessServiceHost ===
+set "E103_DO_R3=0"
+if !E103_SVC! equ 1 set "E103_DO_R3=1"
+if "!E103_SVC_STATE!" neq "4" if !E103_SVC! neq 2 set "E103_DO_R3=1"
+if !E103_DO_R3! equ 1 (
+    echo  !CCYN![Fix 3]!R! !CWHT!Restart AdskAccessServiceHost service!R!
+    echo    !DIM!Service is installed but not running properly.!R!
+    set /p "E103_R3=  Apply fix? [Y/N]: "
+)
+if !E103_DO_R3! equ 1 if /i "!E103_R3!"=="Y" (
+    net stop AdskAccessServiceHost >nul 2>&1
+    timeout /t 2 /nobreak >nul
+    net start AdskAccessServiceHost >nul 2>&1
+    if !errorlevel! equ 0 echo    !CGRN!Service restarted.!R!
+    if !errorlevel! neq 0 echo    !CRED!Failed to start service. May need ODIS reinstall.!R!
+    set /a E103_FIXES+=1
+    echo  [Fix 3] Service restart: ATTEMPTED >> "!E103LOG!"
+    echo.
+)
+if !E103_DO_R3! equ 1 if /i "!E103_R3!" neq "Y" (
+    echo    !CYLW!Skipped.!R!
+    echo  [Fix 3] Service restart: SKIPPED >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 4: ODIS infrastructure ===
+if !E103_ODIS! gtr 0 (
+    echo  !CCYN![Fix 4]!R! !CWHT!Reset ODIS infrastructure!R!
+    echo    !DIM!This will remove ODIS folders and run RemoveODIS.exe.!R!
+    echo    !DIM!You will need to re-download Autodesk Access afterwards.!R!
+    set /p "E103_R4=  Apply fix? [Y/N]: "
+)
+if !E103_ODIS! gtr 0 if /i "!E103_R4!"=="Y" (
+    echo    Stopping ODIS services...
+    net stop AdskAccessServiceHost >nul 2>&1
+    if exist "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" (
+        echo    Running RemoveODIS.exe...
+        "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" --mode unattended >nul 2>&1
+    )
+    if exist "C:\ProgramData\Autodesk\ODIS" (
+        echo    Removing ODIS data folder...
+        rmdir /s /q "C:\ProgramData\Autodesk\ODIS" >nul 2>&1
+    )
+    if exist "C:\Program Files\Autodesk\AdODIS" (
+        echo    Removing AdODIS program folder...
+        rmdir /s /q "C:\Program Files\Autodesk\AdODIS" >nul 2>&1
+    )
+    set /a E103_FIXES+=1
+    echo    !CGRN!ODIS infrastructure removed.!R!
+    echo    !CWHT!Next step:!R! Download Autodesk Access from autodesk.com
+    echo  [Fix 4] ODIS reset: COMPLETED >> "!E103LOG!"
+    echo.
+)
+if !E103_ODIS! gtr 0 if /i "!E103_R4!" neq "Y" (
+    echo    !CYLW!Skipped.!R!
+    echo  [Fix 4] ODIS reset: SKIPPED >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 5: ProductInformation.pit ===
+if !E103_PIT! equ 1 (
+    echo  !CCYN![Fix 5]!R! !CWHT!Delete ProductInformation.pit!R!
+    echo    !DIM!!E103_PITFILE!!R!
+    set /p "E103_R5=  Apply fix? [Y/N]: "
+    if /i "!E103_R5!"=="Y" del /f "!E103_PITFILE!" >nul 2>&1
+    if /i "!E103_R5!"=="Y" set /a E103_FIXES+=1
+    if /i "!E103_R5!"=="Y" echo    !CGRN!Deleted. Will regenerate on next launch.!R!
+    if /i "!E103_R5!"=="Y" echo  [Fix 5] PIT file: DELETED >> "!E103LOG!"
+    if /i "!E103_R5!" neq "Y" echo    !CYLW!Skipped.!R!
+    if /i "!E103_R5!" neq "Y" echo  [Fix 5] PIT file: SKIPPED >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 7: TEMP path (info only) ===
+if !E103_TEMP! equ 1 (
+    echo  !CCYN![Fix 7]!R! !CWHT!TMP/TEMP path is non-default!R!
+    echo    !DIM!Current: !TEMP!!R!
+    echo    !DIM!Expected: C:\Users\%USERNAME%\AppData\Local\Temp!R!
+    echo    !CYLW!This must be fixed manually in System Environment Variables.!R!
+    echo    !DIM!Control Panel ^> System ^> Advanced ^> Environment Variables!R!
+    echo  [Fix 7] TEMP path: NON-DEFAULT ^(manual fix required^) >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 8: VC++ Redistributable (info only) ===
+if !E103_VC! equ 1 (
+    echo  !CCYN![Fix 8]!R! !CWHT!Visual C++ 2015-2022 x64 not found!R!
+    echo    !CYLW!Download and install from Microsoft:!R!
+    echo    !DIM!https://aka.ms/vs/17/release/vc_redist.x64.exe!R!
+    echo  [Fix 8] VC++ Redist: NOT FOUND ^(manual install required^) >> "!E103LOG!"
+    echo.
+)
+
+REM === Repair 9: Event Viewer findings (info only) ===
+if !E103_EVT! gtr 0 (
+    echo  !CCYN![Fix 9]!R! !CWHT!!E103_EVT! Autodesk errors found in Event Viewer!R!
+    echo    !DIM!Recent errors from Application log ^(last 7 days^):!R!
+    echo  [Fix 9] Event Viewer errors: >> "!E103LOG!"
+)
+set "E103_EVT_DISP=0"
+for /f "tokens=*" %%e in ('type "!LOGDIR!\e103_evt_tmp.txt" 2^>nul') do (
+    if !E103_EVT_DISP! lss 3 echo    !DIM!  %%e!R!
+    set /a E103_EVT_DISP+=1
+)
+if !E103_EVT! gtr 0 (
+    echo    !CYLW!Open Event Viewer ^> Application log and filter by "Autodesk"!R!
+    echo.
+)
+
+REM --- Repair Summary ---
+echo  !CCYN!============================================================!R!
+echo ================================================ >> "!E103LOG!"
+echo SUMMARY: >> "!E103LOG!"
+if !E103_FIXES! gtr 0 (
+    echo  !CGRN!!BOLD!  !E103_FIXES! fix^(es^) applied.!R!
+    echo  !E103_FIXES! fix^(es^) applied. >> "!E103LOG!"
+)
+if !E103_FIXES! equ 0 (
+    echo  !CYLW!  No fixes applied.!R!
+    echo  No fixes applied. >> "!E103LOG!"
+)
+echo.
+echo  !CWHT!Recommended next steps:!R!
+echo    1. Reboot your computer
+set "E103_AA_TIP=Download Autodesk Access from autodesk.com/products/autodesk-access"
+if "!E103_AA_VER!" neq "NOT INSTALLED" set "E103_AA_TIP=Your Autodesk Access is !E103_AA_VER! - visit autodesk.com/products/autodesk-access for updates"
+echo    2. !E103_AA_TIP!
+echo    3. Try the Autodesk product installation again
+echo.
+echo  !CWHT!Log saved to:!R! !DIM!!E103LOG!!R!
+echo  Completed: %date% %time% >> "!E103LOG!"
+del /f "!E103_EVTTMP!" >nul 2>&1
 echo.
 pause
 goto :main_menu
