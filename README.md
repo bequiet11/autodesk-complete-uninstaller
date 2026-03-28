@@ -7,7 +7,7 @@ Autodesk Complete Uninstaller
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F60_Clean-brightgreen?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/0399943b0d8e6f29578b03055184a1d0975d30a2f3319f109e23284df5f80b7c)
 [![GitHub downloads](https://img.shields.io/github/downloads/bequiet11/autodesk-complete-uninstaller/total?color=brightgreen&label=Downloads)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases)
 
-https://github.com/user-attachments/assets/03b1acb1-abd1-4a8f-bef8-d81000bd6dd1
+https://github.com/user-attachments/assets/198ecd10-13b6-4035-bcfb-b769a9e142db
 
 A single-file Windows batch tool that fully detects, uninstalls, and deep-cleans **every** Autodesk product from a machine — all versions from 2015 through 2026+. **Achieves a verified zero-remnant clean on real machines without requiring a reboot.**
 
