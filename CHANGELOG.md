@@ -1,5 +1,25 @@
 # Changelog
 
+## v5.7 (2026-03-29)
+
+### Fixed
+- **Locked folder retry (Phase E3):** After all phases complete, retries deletion of any folders that were locked during Phase E — kills all processes, stops msiserver + WSearch, restarts explorer, then retries with takeown/icacls and file-level delete fallback
+- **Stop msiserver before folder deletion:** Windows Installer service holds handles on `C:\Autodesk\IM\BackUps\` staging area created by ODIS uninstaller. Now stopped in Phase B and Deep Clean main kill sequence, before first deletion attempt
+- **Reboot cleanup gated:** `reboot_cleanup.bat` only generated if folders are STILL locked after Phase E3 retry (previously generated immediately on first failure)
+
+### Improved
+- Deep Clean now tracks locked folders (`DC_LOCKED`) and retries with same Phase E3 strategy
+- File-level delete fallback: `del /f /s /q` + bottom-up `rd` removes files individually when `rd /s /q` fails on a tree
+
+### Verified
+- **Zero-remnant result without reboot** on G9-BOX — `C:\Autodesk` (previously always locked) now deletes on first attempt. 12/12 checks CLEAN.
+
+## v5.6 (2026-03-29)
+
+### Improved
+- **Shared data definitions:** Process kill lists, service names, and class key lists consolidated into variables defined once at top of script — reduces duplication and file size
+- **SHA-256 self-verification:** Script displays its own hash on startup via `certutil` for integrity checking against published hashes
+
 ## v5.5 (2026-03-28)
 
 ### Fixed

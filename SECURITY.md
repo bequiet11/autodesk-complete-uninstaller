@@ -32,7 +32,7 @@ If you discover a security issue with this tool, please report it responsibly:
 
 | Version | Supported |
 | ------- | --------- |
-| v5.5    | ✅ Yes    |
-| < v5.5  | ❌ No     |
+| v5.7    | ✅ Yes    |
+| < v5.7  | ❌ No     |
 
 We recommend always using the [latest release](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest).

@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v5.5
+title Autodesk Universal Uninstaller v5.7
 
 REM === ANSI Color Setup ===
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
@@ -25,6 +25,19 @@ set "SKIP=!CYLW![SKIP]!R!"
 set "WARN=!CYLW![WARN]!R!"
 set "INFO=!CCYN![INFO]!R!"
 
+REM === SHARED DATA LISTS ===
+REM Process names to kill (used by Phase B, Phase E, Deep Clean)
+set "KILL_PROCS=AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe"
+
+REM Service names to stop/delete (used by Phase B, Phase G, Deep Clean)
+set "SVC_NAMES=AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM"
+
+REM HKCU named class keys to clean (used by Phase H2, Deep Clean, remnant scan, audit, verify)
+set "CLASS_KEYS=AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr"
+
+REM Process names for scan display (without .exe, for wmic/process detection)
+set "KILL_PROCS_SCAN=AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator"
+
 net session >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
@@ -42,7 +55,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v5.5 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v5.7 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -74,7 +87,7 @@ if not exist "C:\ProgramData\Autodesk\ODIS\metadata" (
 )
 echo ------------------------------------------------ >> "!DIAGFILE!"
 echo SERVICES: >> "!DIAGFILE!"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM) do (
+for %%s in (!SVC_NAMES!) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         echo  %%s: RUNNING >> "!DIAGFILE!"
@@ -109,10 +122,17 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  !CCYN!============================================================!R!
-echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.5         !R!
+echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.7         !R!
 echo  !CCYN!  !DIM!  Supports all versions: 2015-2026+                  !R!
 echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11          !R!
 echo  !CCYN!============================================================!R!
+REM === File Integrity Check ===
+for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%~f0" SHA256 2^>nul') do (
+    if not defined SCRIPT_HASH set "SCRIPT_HASH=%%h"
+)
+if defined SCRIPT_HASH (
+    echo  !DIM!SHA-256: !SCRIPT_HASH!!R!
+)
 echo.
 echo   !CWHT![1]!R!  !CCYN!Scan!R! Installed Autodesk Software
 echo   !CWHT![2]!R!  !CCYN!Uninstall!R! Selected Products
@@ -646,7 +666,7 @@ net stop "FlexNet Licensing Service 64" >nul 2>&1
 net stop "Autodesk Genuine Service" >nul 2>&1
 echo  !CGRN!done.!R!
 <nul set /p "=      !DIM!Killing processes!R!"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe AdODIS.exe) do (
+for %%p in (!KILL_PROCS!) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
@@ -1122,13 +1142,14 @@ echo  !DIM![%time:~0,8%]!R! !CCYN!Progress: !CGRN!==========!R!!DIM!==========!R
 REM --- Phase E: Delete folders ---
 REM Kill any processes that Phase C/D may have spawned
 <nul set /p "=  !DIM![%time:~0,8%]!R! !CCYN!!BOLD![E]!R! Killing residual processes"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe) do (
+for %%p in (!KILL_PROCS!) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
 wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
 REM Stop Windows Search to release index handles on Autodesk folders
+net stop msiserver >nul 2>&1
 net stop WSearch >nul 2>&1
 REM Unregister shell extensions that explorer.exe holds loaded
 set "EXPLORER_KILLED=0"
@@ -1267,33 +1288,6 @@ if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
     )
 )
 echo      !DOK! deleted, !DFL! locked.
-REM If folders are locked, create a reboot cleanup script
-if !DFL! gtr 0 (
-    set "REBOOT_BAT=!LOGDIR!\reboot_cleanup.bat"
-    echo @echo off > "!REBOOT_BAT!"
-    echo timeout /t 10 /nobreak ^>nul >> "!REBOOT_BAT!"
-    for %%d in (
-        "C:\Program Files\Autodesk"
-        "C:\Program Files\Common Files\Autodesk Shared"
-        "C:\Program Files\Common Files\Autodesk"
-        "C:\Program Files (x86)\Autodesk"
-        "C:\Program Files (x86)\Common Files\Autodesk Shared"
-        "C:\Program Files (x86)\Common Files\Autodesk"
-        "C:\ProgramData\Autodesk"
-        "C:\Users\Public\Documents\Autodesk"
-        "C:\Autodesk"
-        "C:\Program Files\Common Files\Macrovision Shared"
-    ) do (
-        echo if exist %%d rd /s /q %%d >> "!REBOOT_BAT!"
-    )
-    echo if exist "%APPDATA%\Autodesk" rd /s /q "%APPDATA%\Autodesk" >> "!REBOOT_BAT!"
-    echo if exist "%LOCALAPPDATA%\Autodesk" rd /s /q "%LOCALAPPDATA%\Autodesk" >> "!REBOOT_BAT!"
-    echo if exist "%LOCALAPPDATA%\Programs\Autodesk" rd /s /q "%LOCALAPPDATA%\Programs\Autodesk" >> "!REBOOT_BAT!"
-    echo del /f "!REBOOT_BAT!" >> "!REBOOT_BAT!"
-    reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" /v "AutodeskCleanup" /t REG_SZ /d "\"!REBOOT_BAT!\"" /f >nul 2>&1
-    echo      !CYLW!Reboot cleanup script scheduled.!R!
-    echo   REBOOT CLEANUP SCHEDULED >> "!LOGFILE!"
-)
 echo.
 
 REM --- Optional: Installer/Download files cleanup ---
@@ -1428,7 +1422,7 @@ echo  !DIM![%time:~0,8%]!R! !CCYN!Progress: !CGRN!===============!R!!DIM!=====!R
 REM --- Phase G: Services, tasks, firewall ---
 echo  !DIM![%time:~0,8%]!R! !CCYN!!BOLD![G]!R! !CWHT!Removing services, tasks, firewall rules...!R!
 <nul set /p "=      Services"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM) do (
+for %%s in (!SVC_NAMES!) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         sc delete "%%s" >nul 2>&1
@@ -1525,7 +1519,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^
         set /a CDEL+=1
     )
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr) do (
+for %%n in (!CLASS_KEYS!) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         reg delete "HKCU\SOFTWARE\Classes\%%n" /f >nul 2>&1
@@ -1588,6 +1582,72 @@ rd /s /q "C:\Program Files (x86)\Autodesk\Genuine Service" 2>nul
 rd /s /q "%LOCALAPPDATA%\Programs\Autodesk\Genuine Service" 2>nul
 echo  !CGRN!done.!R!
 echo.
+REM --- Phase E3: Retry locked folders ---
+if defined LOCKED_LIST (
+    echo.
+    echo  !DIM![%time:~0,8%]!R! !CCYN!!BOLD![E3]!R! !CWHT!Retrying locked folders...!R!
+    for %%p in (!KILL_PROCS!) do (
+        taskkill /f /im "%%p" >nul 2>&1
+    )
+    wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+    wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+    net stop WSearch >nul 2>&1
+    net stop msiserver >nul 2>&1
+    REM Kill explorer to release shell extension handles on backup files
+    taskkill /f /im explorer.exe >nul 2>&1
+    timeout /t 2 >nul
+    start "" explorer.exe
+    timeout /t 2 >nul
+    timeout /t 2 >nul
+    REM Delete files first, then remove empty dirs
+    for %%d in (!LOCKED_LIST!) do (
+        if exist "%%d" (
+            del /f /s /q "%%d\*" >nul 2>&1
+            for /f "delims=" %%x in ('dir /s /b /ad "%%d" 2^>nul ^| sort /r') do rd "%%x" 2>nul
+        )
+    )
+    for %%d in (!LOCKED_LIST!) do (
+        if exist "%%d" (
+            <nul set /p "=      %%~d..."
+            rd /s /q "%%d" 2>nul
+            if exist "%%d" (
+                takeown /f "%%d" /r /d y >nul 2>&1
+                icacls "%%d" /grant Everyone:F /t /c /q >nul 2>&1
+                rd /s /q "%%d" 2>nul
+            )
+            if not exist "%%d" (
+                echo  !CGRN!deleted.!R!
+            )
+            if exist "%%d" (
+                echo  !CRED!still locked - will clean on reboot.!R!
+            )
+        )
+        if not exist "%%d" (
+            echo      %%~d... !CGRN!already gone.!R!
+        )
+    )
+)
+
+REM Generate reboot cleanup only if folders still locked after retry
+set "STILL_LOCKED=0"
+if defined LOCKED_LIST (
+    for %%d in (!LOCKED_LIST!) do (
+        if exist "%%d" set "STILL_LOCKED=1"
+    )
+)
+if !STILL_LOCKED! equ 1 (
+    set "REBOOT_BAT=!LOGDIR!\reboot_cleanup.bat"
+    echo @echo off > "!REBOOT_BAT!"
+    echo timeout /t 10 /nobreak ^>nul >> "!REBOOT_BAT!"
+    for %%d in (!LOCKED_LIST!) do (
+        if exist "%%d" echo if exist "%%d" rd /s /q "%%d" >> "!REBOOT_BAT!"
+    )
+    echo del /f "!REBOOT_BAT!" >> "!REBOOT_BAT!"
+    reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" /v "AutodeskCleanup" /t REG_SZ /d "\"!REBOOT_BAT!\"" /f >nul 2>&1
+    echo      !CYLW!Reboot cleanup script scheduled for remaining locked folders.!R!
+    echo   REBOOT CLEANUP SCHEDULED >> "!LOGFILE!"
+)
+
 echo  === FULL CLEAN COMPLETE === >> "!LOGFILE!"
 
 echo  ========================================================
@@ -1670,7 +1730,7 @@ net stop "FlexNet Licensing Service 64" >nul 2>&1
 net stop "Autodesk Genuine Service" >nul 2>&1
 echo  !CGRN!done.!R!
 <nul set /p "=  Killing processes"
-for %%p in (AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe AdODIS.exe) do (
+for %%p in (!KILL_PROCS!) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
@@ -1749,6 +1809,7 @@ for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe I
     taskkill /f /im "%%p" >nul 2>&1
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+net stop msiserver >nul 2>&1
 net stop WSearch >nul 2>&1
 REM Unregister shell extensions loaded by explorer.exe
 set "DC_EXPLORER=0"
@@ -1772,6 +1833,7 @@ if !DC_EXPLORER! equ 1 (
 )
 echo  !CGRN!done.!R!
 timeout /t 3 >nul
+set "DC_LOCKED="
 echo  Deleting folders...
 for %%d in (
     "C:\Program Files\Autodesk"
@@ -1794,7 +1856,10 @@ for %%d in (
             rd /s /q %%d 2>nul
         )
         if not exist %%d echo  !CGRN!deleted.!R!
-        if exist %%d echo  !CRED!LOCKED.!R!
+        if exist %%d (
+            echo  !CRED!LOCKED.!R!
+            set "DC_LOCKED=!DC_LOCKED! %%~d"
+        )
     )
 )
 for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Programs\Autodesk") do (
@@ -1807,7 +1872,10 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
             rd /s /q "%%~d" 2>nul
         )
         if not exist "%%~d" echo  !CGRN!deleted.!R!
-        if exist "%%~d" echo  !CRED!LOCKED.!R!
+        if exist "%%~d" (
+            echo  !CRED!LOCKED.!R!
+            set "DC_LOCKED=!DC_LOCKED! %%~d"
+        )
     )
 )
 if exist "%LOCALAPPDATA%\com.autodesk.cer-dialog" (
@@ -1922,7 +1990,7 @@ echo    !DC_SC! shortcuts removed.
 
 echo.
 <nul set /p "=  Deleting services"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM) do (
+for %%s in (!SVC_NAMES!) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         sc delete "%%s" >nul 2>&1
@@ -2001,7 +2069,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "Autodesk" /k 2^
         set /a DC_CDEL+=1
     )
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr) do (
+for %%n in (!CLASS_KEYS!) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         reg delete "HKCU\SOFTWARE\Classes\%%n" /f >nul 2>&1
@@ -2049,6 +2117,43 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "acadlt" /k 2^>n
 )
 echo    !DC_CDEL! user registry entries cleaned.
 
+REM --- Retry locked folders ---
+if defined DC_LOCKED (
+    echo.
+    echo  Retrying locked folders...
+    for %%p in (!KILL_PROCS!) do (
+        taskkill /f /im "%%p" >nul 2>&1
+    )
+    wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+    net stop WSearch >nul 2>&1
+    net stop msiserver >nul 2>&1
+    REM Kill explorer to release shell extension handles on backup files
+    taskkill /f /im explorer.exe >nul 2>&1
+    timeout /t 2 >nul
+    start "" explorer.exe
+    timeout /t 2 >nul
+    timeout /t 2 >nul
+    REM Delete files first, then remove empty dirs
+    for %%d in (!DC_LOCKED!) do (
+        if exist "%%d" (
+            del /f /s /q "%%d\*" >nul 2>&1
+            for /f "delims=" %%x in ('dir /s /b /ad "%%d" 2^>nul ^| sort /r') do rd "%%x" 2>nul
+        )
+    )
+    for %%d in (!DC_LOCKED!) do (
+        if exist "%%d" (
+            <nul set /p "=    %%~d..."
+            rd /s /q "%%d" 2>nul
+            if exist "%%d" (
+                takeown /f "%%d" /r /d y >nul 2>&1
+                icacls "%%d" /grant Everyone:F /t /c /q >nul 2>&1
+                rd /s /q "%%d" 2>nul
+            )
+            if not exist "%%d" echo  !CGRN!deleted.!R!
+            if exist "%%d" echo  !CRED!still locked.!R!
+        )
+    )
+)
 echo.
 echo  !CGRN!!BOLD!Deep clean complete.!R!
 echo  === DEEP CLEAN COMPLETE === >> "!LOGFILE!"
@@ -2274,7 +2379,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>
     <nul set /p "=!ESC![50G!DIM!scanning: !RS_CLASS!  !R!"
     echo  ADSK-CLASS: %%k >> "!SCANFILE!"
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile dwgviewr cdc_auto_file CompleteR16PlotConfigurationFile) do (
+for %%n in (!CLASS_KEYS! dwgviewr) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         set /a RS_CLASS+=1
@@ -2751,7 +2856,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>
     <nul set /p "=!ESC![50G!DIM!scanning: !AU_ASSOC!  !R!"
     echo   %%k >> "!AUDITFILE!"
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile .dgn) do (
+for %%n in (!CLASS_KEYS! .dgn) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         set /a AU_ASSOC+=1
@@ -3459,7 +3564,7 @@ if !VP! equ 0 echo  !CGRN!CLEAN!R!
 REM === 2. RUNNING PROCESSES ===
 <nul set /p "=  !CWHT![2/12]!R! Processes..."
 set PR=0
-for %%p in (AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator) do (
+for %%p in (!KILL_PROCS_SCAN!) do (
     tasklist /fi "imagename eq %%p*" 2>nul | findstr /i "%%p" >nul 2>&1
     if !errorlevel! equ 0 (
         set /a PR+=1
@@ -3575,7 +3680,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "AutoCAD" /k 2^>
     set /a RD+=1
     echo   HKCU-CLASS: %%k >> "!VLOG!"
 )
-for %%n in (AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile) do (
+for %%n in (!CLASS_KEYS!) do (
     reg query "HKCU\SOFTWARE\Classes\%%n" >nul 2>&1
     if !errorlevel! equ 0 (
         set /a RD+=1
