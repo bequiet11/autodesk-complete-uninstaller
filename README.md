@@ -4,8 +4,6 @@ A single-file Windows batch tool that fully detects, uninstalls, and deep-cleans
 
 Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https://resources.imaginit.com/support-blog/where-is-the-autodesk-uninstall-tool-with-autodesk-2022-products), and the standard Windows "Add/Remove Programs" method leaves behind gigabytes of orphaned files, registry keys, services, and licensing artifacts that block fresh installations and waste disk space.
 
-![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
-
 [![GitHub release](https://img.shields.io/github/v/release/bequiet11/autodesk-complete-uninstaller?color=blue&label=Latest%20Release)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bequiet11/autodesk-complete-uninstaller/blob/main/LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/bequiet11/autodesk-complete-uninstaller)
@@ -13,6 +11,8 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 [![GitHub downloads](https://img.shields.io/github/downloads/bequiet11/autodesk-complete-uninstaller/total?color=brightgreen&label=Downloads)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases)
 
 > **Antivirus Note:** The VirusTotal scan shows **1/61** — this is a single false positive from **DrWeb** (`BAT.Starter.721`), a generic signature that flags virtually any batch file performing registry operations. All other 60 engines report the file as clean. The script is open-source — you can read every line in Notepad before running it.
+
+![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
 
 https://github.com/user-attachments/assets/198ecd10-13b6-4035-bcfb-b769a9e142db
 
