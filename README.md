@@ -1,4 +1,5 @@
 Autodesk Complete Uninstaller
+
 A single-file Windows batch tool that fully detects, uninstalls, and deep-cleans **every** Autodesk product from a machine — all versions from 2015 through 2026+. **Achieves a verified zero-remnant clean on real machines without requiring a reboot.**
 
 Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https://resources.imaginit.com/support-blog/where-is-the-autodesk-uninstall-tool-with-autodesk-2022-products), and the standard Windows "Add/Remove Programs" method leaves behind gigabytes of orphaned files, registry keys, services, and licensing artifacts that block fresh installations and waste disk space.
