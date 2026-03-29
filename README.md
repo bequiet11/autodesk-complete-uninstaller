@@ -4,6 +4,8 @@ A single-file Windows batch tool that fully detects, uninstalls, and deep-cleans
 
 Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https://resources.imaginit.com/support-blog/where-is-the-autodesk-uninstall-tool-with-autodesk-2022-products), and the standard Windows "Add/Remove Programs" method leaves behind gigabytes of orphaned files, registry keys, services, and licensing artifacts that block fresh installations and waste disk space.
 
+![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
+
 [![GitHub release](https://img.shields.io/github/v/release/bequiet11/autodesk-complete-uninstaller?color=blue&label=Latest%20Release)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bequiet11/autodesk-complete-uninstaller/blob/main/LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/bequiet11/autodesk-complete-uninstaller)
