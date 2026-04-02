@@ -12,13 +12,13 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 > **Antivirus Note:** The VirusTotal scan shows **0/61 Clean** — no security vendor flags this file as malicious. The script is open-source and you can read every line in Notepad before running it.
 
-![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
-
 ![Recording2026-04-02144243_v5 8_edit_5-50m_10q_60fps_x264_no-aud-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/adb983eb-25db-4a48-8457-869d77ac7c17)
 
+![Recording2026-04-02144243_v5 8_edit_5-50m_10q_60fps_x264_no-aud-ezgif com-video-to-gif-converter (2)](https://github.com/user-attachments/assets/4c6f1d69-b73c-4fc4-8be6-0c325b5c4ede)
 
 
 ---
+![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
 
 <img width="774" height="488" alt="image" src="https://github.com/user-attachments/assets/080939d3-21cf-4de4-9885-50046f2d0082" />
 
