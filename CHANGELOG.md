@@ -1,5 +1,39 @@
 # Changelog
 
+## v5.8 (2026-04-02)
+
+### Added — Installation Readiness
+- **IFEO debugger block cleanup (Phase H3):** Removes `Debugger=Blocked` on 15 Autodesk executables — fixes "Preparing for installation" failures from cracked software
+- **PendingFileRenameOperations cleanup:** Removes Autodesk entries from pending reboot operations — fixes reboot loops
+- **Hosts file detection (Error 103 [10/10]):** Detects entries blocking Autodesk license servers with guided repair
+- **Pending reboot state cleanup:** Clears RebootRequired, Orchestrator/RebootRequired, UpdateExeVolatile + flushes msiserver — fixes "An operating system restart is pending"
+- **Option [11] Fix Restart Pending:** 5-point reboot indicator diagnostic with repair
+- **Option [12] Backup Templates:** Save custom templates, profiles, settings before cleanup
+
+### Added — UX
+- **ODIS progress dots** during long uninstalls instead of frozen screen
+- **Time estimate** before Phase C based on product count
+- **Progress counter [X/Y]** per product with ODIS patience messages
+- **Timestamps on all** verification, scan, and audit lines
+- **Console log** (console_log.txt) mirrors all key operations
+- **Templates backup prompt** before Full Clean
+- **Installer cleanup tip** and **restore point tip** with color-coded guidance
+
+### Fixed
+- **Process check performance:** Replaced tasklist (4-min hang after cleanup) with PowerShell Get-Process (~1 sec)
+- **Error 103 ODIS status:** Shows "NOT INSTALLED" instead of false "DAMAGED" when no products exist
+- **Timestamp bug:** All %time% converted to !time! for correct delayed expansion
+- **Verify RM count:** RebootRequired flags now correctly counted in total
+
+### Improved
+- Error 103: 10-point diagnostic (was 9), IFEO check 15 executables (was 4)
+- Verify: 15 checks, Scan: 14 steps, Audit: 16 steps
+- HKCU\SOFTWARE\SOFTWARE\Autodesk duplicate path cleanup
+- Locale-safe backup date via wmic localdatetime
+- ODIS timeout: 10 minutes (was 5)
+- Public Documents included in backup
+
+
 ## v5.7 (2026-03-29)
 
 ### Fixed
