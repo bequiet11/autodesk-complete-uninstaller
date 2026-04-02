@@ -14,7 +14,9 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 
 ![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
 
-https://github.com/user-attachments/assets/198ecd10-13b6-4035-bcfb-b769a9e142db
+![Recording2026-04-02144243_v5 8_edit_5-50m_10q_60fps_x264_no-aud-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/adb983eb-25db-4a48-8457-869d77ac7c17)
+
+
 
 ---
 
