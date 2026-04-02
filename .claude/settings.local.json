@@ -1,0 +1,17 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(/c/Users/G9-BOX/AppData/Local/GitHub CLI/gh.exe pr:*)",
+      "Bash(/c/Program Files/GitHub CLI/gh.exe pr:*)",
+      "Bash(export PATH=\"$PATH:/c/Program Files/GitHub CLI\")",
+      "Bash(gh pr:*)",
+      "Bash(git pull:*)",
+      "Bash(cp /c/cld/acu/autodesk_complete_uninstaller.bat ./autodesk_complete_uninstaller.bat)",
+      "Bash(certutil -hashfile autodesk_complete_uninstaller.bat SHA256)",
+      "Bash(git stash:*)",
+      "Bash(sed -i '/^# Changelog$/r /tmp/cl_v58.md' CHANGELOG.md)",
+      "Bash(git add:*)",
+      "Bash(git commit -m ':*)"
+    ]
+  }
+}
