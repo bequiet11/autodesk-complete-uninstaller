@@ -20,7 +20,7 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 ---
 ![Scan Installed Autodesk Software](https://github.com/user-attachments/assets/8e3d9689-5d95-477a-b8c6-0bbc4acc18cd)
 
-<img width="774" height="512" alt="image" src="https://github.com/user-attachments/assets/50c77206-2af8-41d1-8adf-1dee6a5f78e3" />
+<img width="772" height="596" alt="image" src="https://github.com/user-attachments/assets/2b9d8568-5b8f-41f1-8c0d-6e8123d1269a" />
 
 <img width="726" height="539" alt="image" src="https://github.com/user-attachments/assets/2fcf6d7b-65d7-40e4-8d58-c621333f9b6e" />
 
