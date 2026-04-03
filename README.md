@@ -8,7 +8,7 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bequiet11/autodesk-complete-uninstaller/blob/main/LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/bequiet11/autodesk-complete-uninstaller)
 [![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F61_Clean-brightgreen?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/1c951ff7dbc935b6f5da3de6df54cdf812467924df8885d0d99385a975f9499f)
-[![GitHub downloads](https://img.shields.io/github/downloads/bequiet11/autodesk-complete-uninstaller/total.svg?color=brightgreen&label=Downloads)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases)
+[![GitHub downloads](https://img.shields.io/github/downloads/bequiet11/autodesk-complete-uninstaller/total.svg?style=flat&color=brightgreen&label=Downloads)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases)
 
 > **Antivirus Note:** The VirusTotal scan shows **0/61 Clean** — no security vendor flags this file as malicious. The script is open-source and you can read every line in Notepad before running it.
 
