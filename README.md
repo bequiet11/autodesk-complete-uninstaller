@@ -17,7 +17,8 @@ Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https:
 ![Recording2026-04-02144243_v5 8_edit_5-50m_10q_60fps_x264_no-aud-ezgif com-video-to-gif-converter (2)](https://github.com/user-attachments/assets/4c6f1d69-b73c-4fc4-8be6-0c325b5c4ede)
 
 
-https://github.com/user-attachments/assets/39553881-308f-449d-adf8-cd592eb242d1
+https://github.com/user-attachments/assets/988e9837-abfa-4a4b-9aa0-c91dc8f088c4
+
 
 ---
 <img width="774" height="516" alt="image" src="https://github.com/user-attachments/assets/14fdbfc4-b6af-486d-978b-6c7f483c64a9" />
