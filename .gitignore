@@ -17,3 +17,10 @@ $RECYCLE.BIN/
 .agents/
 .claude/
 skills-lock.json
+
+# Test artifacts
+output_*.txt
+test_*.bat
+test_*.txt
+run_*.ps1
+*.ps1
