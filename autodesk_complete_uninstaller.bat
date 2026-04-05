@@ -1827,7 +1827,7 @@ REM --- System PATH cleanup ---
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT!Cleaning system PATH...!R!"
 reg export "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "!LOGDIR!\system_path_backup.reg" /y >nul 2>&1
 set PATH_CLEANED=0
-for /f "delims=" %%r in ('powershell -NoProfile -Command "$p = [Environment]::GetEnvironmentVariable('Path','Machine'); $entries = $p -split ';'; $clean = @(); $removed = 0; foreach ($e in $entries) { if ($e -and ($e -match 'Autodesk|AdODIS')) { $removed++ } elseif ($e) { $clean += $e } }; if ($removed -gt 0) { [Environment]::SetEnvironmentVariable('Path', ($clean -join ';'), 'Machine') }; Write-Output $removed"') do set "PATH_CLEANED=%%r"
+for /f "delims=" %%r in ('powershell -NoProfile -Command "$k=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment',$true); if($k){ $v=$k.GetValue('Path','', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames); if($v){ $e=$v -split ';'; $c=@(); $rm=0; foreach($x in $e){ if($x -and ($x -match 'Autodesk|AdODIS')){ $rm++ }elseif($x){ $c+=$x } }; if($rm -gt 0){ $k.SetValue('Path',($c -join ';'),[Microsoft.Win32.RegistryValueKind]::ExpandString) }; $k.Close(); Write-Output $rm }else{ Write-Output 0 } }else{ Write-Output 0 }"') do set "PATH_CLEANED=%%r"
 if !PATH_CLEANED! gtr 0 echo  !PATH_CLEANED! dead entries removed.
 if !PATH_CLEANED! equ 0 echo  !CGRN!clean.!R!
 echo  SYSTEM-PATH: !PATH_CLEANED! dead entries removed >> "!LOGFILE!"
@@ -2494,7 +2494,7 @@ REM --- System PATH cleanup ---
 <nul set /p "=  !DIM![!time:~0,8!]!R! Cleaning system PATH..."
 reg export "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "!LOGDIR!\system_path_backup.reg" /y >nul 2>&1
 set DC_PATH=0
-for /f "delims=" %%r in ('powershell -NoProfile -Command "$p = [Environment]::GetEnvironmentVariable('Path','Machine'); $entries = $p -split ';'; $clean = @(); $removed = 0; foreach ($e in $entries) { if ($e -and ($e -match 'Autodesk|AdODIS')) { $removed++ } elseif ($e) { $clean += $e } }; if ($removed -gt 0) { [Environment]::SetEnvironmentVariable('Path', ($clean -join ';'), 'Machine') }; Write-Output $removed"') do set "DC_PATH=%%r"
+for /f "delims=" %%r in ('powershell -NoProfile -Command "$k=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment',$true); if($k){ $v=$k.GetValue('Path','', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames); if($v){ $e=$v -split ';'; $c=@(); $rm=0; foreach($x in $e){ if($x -and ($x -match 'Autodesk|AdODIS')){ $rm++ }elseif($x){ $c+=$x } }; if($rm -gt 0){ $k.SetValue('Path',($c -join ';'),[Microsoft.Win32.RegistryValueKind]::ExpandString) }; $k.Close(); Write-Output $rm }else{ Write-Output 0 } }else{ Write-Output 0 }"') do set "DC_PATH=%%r"
 if !DC_PATH! gtr 0 echo  !DC_PATH! dead entries removed.
 if !DC_PATH! equ 0 echo  clean.
 echo [!time:~0,8!] Deep Clean: PATH !DC_PATH! entries removed >> "!CLOG!"
@@ -3107,7 +3107,7 @@ if !RS_HOSTS! equ 0 (
 echo [!time:~0,8!] Scan [15/15] Hosts: !RS_HOSTS! >> "!CLOG!"
 
 REM === SUMMARY TABLE ===
-set /a RS_TOTAL=RS_PROD+RS_PROC+RS_SVC+RS_PF+RS_DATA+RS_CDRIVE+RS_REG+RS_COM+RS_CLASS+RS_SHELL+RS_OTHER+RS_IFEO+RS_PFRO+RS_HOSTS
+set /a RS_TOTAL=RS_PROD+RS_PROC+RS_SVC+RS_PF+RS_DATA+RS_CDRIVE+RS_REG+RS_COM+RS_CLASS+RS_SHELL+RS_IP+RS_OTHER+RS_IFEO+RS_PFRO+RS_HOSTS
 echo.
 echo  ============================================================
 echo   !CWHT!!BOLD!REMNANT SCAN COMPLETE - Summary!R!
@@ -3145,6 +3145,9 @@ if !RS_CLASS! equ 0 ( <nul set /p "=  File association class keys      !CGRN!0!R
 echo.
 if !RS_SHELL! gtr 0 ( <nul set /p "=  Shell extensions + uninstall reg !CRED!!RS_SHELL!!R!" )
 if !RS_SHELL! equ 0 ( <nul set /p "=  Shell extensions + uninstall reg !CGRN!0!R!" )
+echo.
+if !RS_IP! gtr 0 ( <nul set /p "=  Installer\Products ghosts        !CRED!!RS_IP!!R!" )
+if !RS_IP! equ 0 ( <nul set /p "=  Installer\Products ghosts        !CGRN!0!R!" )
 echo.
 if !RS_OTHER! gtr 0 ( <nul set /p "=  Shortcuts, tasks, env vars       !CRED!!RS_OTHER!!R!" )
 if !RS_OTHER! equ 0 ( <nul set /p "=  Shortcuts, tasks, env vars       !CGRN!0!R!" )
