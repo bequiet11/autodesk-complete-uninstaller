@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v5.8
+title Autodesk Universal Uninstaller v5.9
 
 REM === ANSI Color Setup ===
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
@@ -58,7 +58,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v5.8 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v5.9 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -67,7 +67,7 @@ set "CLOG=!LOGDIR!\console_log.txt"
 type nul > "!CLOG!"
 echo ============================================================ >> "!CLOG!"
 echo  CONSOLE OUTPUT LOG >> "!CLOG!"
-echo  Autodesk Universal Uninstaller v5.8 >> "!CLOG!"
+echo  Autodesk Universal Uninstaller v5.9 >> "!CLOG!"
 echo  Date: %date% %time% >> "!CLOG!"
 echo  Computer: %COMPUTERNAME%  User: %USERNAME% >> "!CLOG!"
 echo ============================================================ >> "!CLOG!"
@@ -135,7 +135,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  !CCYN!============================================================!R!
-echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.8         !R!
+echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.9         !R!
 echo  !CCYN!  !DIM!  Supports all versions: 2015-2026+                  !R!
 echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11          !R!
 echo  !CCYN!============================================================!R!
@@ -152,7 +152,7 @@ echo   !CWHT![1]!R!  !CCYN!Scan!R! Installed Autodesk Software
 echo   !CWHT![2]!R!  !CCYN!Uninstall!R! Selected Products
 echo   !CRED![3]!R!  !CRED!Full Uninstall + Deep Clean!R! ALL Products
 echo   !CYLW![4]!R!  !CYLW!Deep Clean Only!R! - remnants, no product uninstall
-echo   !CGRN![5]!R!  !CGRN!Final Verification!R! - 15-point deep scan
+echo   !CGRN![5]!R!  !CGRN!Final Verification!R! - 16-point deep scan
 echo   !CBLU![6]!R!  !CBLU!Create System Restore Point!R!
 echo   !CMAG![7]!R!  !CMAG!Search!R! for ALL Autodesk remnants
 echo   !CWHT![8]!R!  !CWHT!Full System Audit!R! - preview everything that will be removed
@@ -568,12 +568,12 @@ for %%n in (!SEL!) do (
                 for /f "delims={} tokens=2" %%g in ("!PUNINST!") do set "GUID=%%g"
                 if defined GUID (
                     <nul set /p "=  [MSI] msiexec /x..."
-                    msiexec /x "{!GUID!}" /qn /norestart
+                    msiexec /x "{!GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress
                     set "UERR=!errorlevel!"
                     if !UERR! equ 0 echo  !CGRN!OK!R!
                     if !UERR! neq 0 (
                         echo  code:!UERR! retrying...
-                        msiexec /x "{!GUID!}" /qb /norestart
+                        msiexec /x "{!GUID!}" /qb /norestart REMOVE=ALL REBOOT=ReallySuppress
                     )
                     set "_HANDLED=1"
                 )
@@ -725,7 +725,11 @@ if !HAS_USERDATA! equ 0 (
     set "BACKUP_CHOICE=N"
 )
 
+set "BK_DT="
 for /f "tokens=2 delims==" %%d in ('wmic os get localdatetime /value 2^>nul') do set "BK_DT=%%d"
+if not defined BK_DT (
+    for /f "delims=" %%d in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMddHHmmss"') do set "BK_DT=%%d"
+)
 set "BK_DATESTAMP=!BK_DT:~0,8!"
 
 if /i "!BACKUP_CHOICE!"=="Y" (
@@ -941,10 +945,10 @@ for %%P in (1 3 4 5 6 7 8) do (
                         set "GUID="
                         for /f "delims={} tokens=2" %%g in ("!PUNINST!") do set "GUID=%%g"
                         if defined GUID (
-                            echo   CMD: msiexec /x {!GUID!} /qn /norestart >> "!LOGFILE!"
+                            echo   CMD: msiexec /x {!GUID!} /qn /norestart REMOVE=ALL REBOOT=ReallySuppress >> "!LOGFILE!"
                             echo.
                             <nul set /p "=         !DIM!Uninstalling...!R!"
-                            msiexec /x "{!GUID!}" /qn /norestart >nul 2>&1
+                            msiexec /x "{!GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress >nul 2>&1
                             set "UERR=!errorlevel!"
                             echo [!time:~0,8!] [!UNINST_CURRENT!/!PROD_COUNT!] !PNAME! - EXIT:!UERR! >> "!CLOG!"
                             echo   EXIT: !UERR! >> "!LOGFILE!"
@@ -1117,7 +1121,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVer
                             for /f "delims={} tokens=2" %%g in ("!R_US!") do set "R_GUID=%%g"
                             if defined R_GUID (
                                 <nul set /p "=..."
-                                msiexec /x "{!R_GUID!}" /qn /norestart >nul 2>&1
+                                msiexec /x "{!R_GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress >nul 2>&1
                                 if !errorlevel! equ 0 (
                                     echo  !CGRN!OK!R!
                                     set /a RETRY_OK+=1
@@ -1163,7 +1167,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Window
                         for /f "delims={} tokens=2" %%g in ("!R_US!") do set "R_GUID=%%g"
                         if defined R_GUID (
                             <nul set /p "=..."
-                            msiexec /x "{!R_GUID!}" /qn /norestart >nul 2>&1
+                            msiexec /x "{!R_GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress >nul 2>&1
                             if !errorlevel! equ 0 (
                                 echo  !CGRN!OK!R!
                                 set /a RETRY_OK+=1
@@ -1364,6 +1368,7 @@ for %%d in (
     "C:\Program Files (x86)\Common Files\Autodesk"
     "C:\ProgramData\Autodesk"
     "C:\Users\Public\Documents\Autodesk"
+    "C:\Users\Public\Autodesk"
     "C:\Autodesk"
     "C:\Program Files\Common Files\Macrovision Shared"
 ) do (
@@ -1592,6 +1597,15 @@ if exist "%LOCALAPPDATA%\Autodesk\Web Services\LoginState.xml" (
 del /q /f "%temp%\*" >nul 2>&1
 for /d %%d in ("%temp%\*") do rd /s /q "%%d" 2>nul
 echo  !CGRN!done.!R!
+REM --- System temp Autodesk cleanup ---
+<nul set /p "=      System temp..."
+for /f "tokens=*" %%f in ('dir /b /ad "C:\Windows\Temp\*Autodesk*" 2^>nul') do (
+    rd /s /q "C:\Windows\Temp\%%f" 2>nul
+)
+for /f "tokens=*" %%f in ('dir /b "C:\Windows\Temp\*Autodesk*" 2^>nul') do (
+    del /f /q "C:\Windows\Temp\%%f" 2>nul
+)
+echo  !CGRN!done.!R!
 echo [!time:~0,8!] Phase F: caches cleaned >> "!CLOG!"
 echo.
 
@@ -1669,11 +1683,19 @@ for %%k in (
         set /a RDEL+=1
     )
 )
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" /f >nul 2>&1
-    echo      ADSKFLEX_LICENSE_FILE env var... deleted.
-    set /a RDEL+=1
+for %%v in (ADSKFLEX_LICENSE_FILE ADSK_LICENSE_FILE AUTODESK_LICENSE_FILE FLEXLM_TIMEOUT) do (
+    reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" /f >nul 2>&1
+        echo      Removed env var: %%v
+        set /a RDEL+=1
+    )
+    reg query "HKCU\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "HKCU\Environment" /v "%%v" /f >nul 2>&1
+        echo      Removed user env var: %%v
+        set /a RDEL+=1
+    )
 )
 echo      !RDEL! registry items removed. Backups in !LOGDIR!
 echo [!time:~0,8!] Phase H: registry cleaned >> "!CLOG!"
@@ -1777,6 +1799,39 @@ if !IFEO_DEL! equ 0 (
     echo      !CGRN!No IFEO blocks found.!R!
 )
 echo [!time:~0,8!] Phase H3: !IFEO_DEL! IFEO blocks removed >> "!CLOG!"
+echo.
+
+REM --- Installer\Products ghost cleanup ---
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT!Cleaning Installer\Products ghosts...!R!"
+set IP_DEL=0
+reg export "HKLM\SOFTWARE\Classes\Installer\Products" "!LOGDIR!\installer_products_backup.reg" /y >nul 2>&1
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\Installer\Products" /s /v "ProductName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "IP_KEY=%%k"
+    set "IP_MATCH=0"
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "ProductName" 2^>nul ^| findstr /i "ProductName"') do (
+        echo "%%b" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 set "IP_MATCH=1"
+    )
+    if !IP_MATCH! equ 1 (
+        reg delete "%%k" /f >nul 2>&1
+        set /a IP_DEL+=1
+    )
+)
+if !IP_DEL! gtr 0 echo  !IP_DEL! ghost entries removed.
+if !IP_DEL! equ 0 echo  !CGRN!clean.!R!
+echo  INSTALLER-PRODUCTS: !IP_DEL! ghost entries removed >> "!LOGFILE!"
+echo [!time:~0,8!] Installer\Products: !IP_DEL! ghosts removed >> "!CLOG!"
+echo.
+
+REM --- System PATH cleanup ---
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT!Cleaning system PATH...!R!"
+reg export "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "!LOGDIR!\system_path_backup.reg" /y >nul 2>&1
+set PATH_CLEANED=0
+for /f "delims=" %%r in ('powershell -NoProfile -Command "$k=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment',$true); if($k){ $v=$k.GetValue('Path','', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames); if($v){ $e=$v -split ';'; $c=@(); $rm=0; foreach($x in $e){ if($x -and ($x -match 'Autodesk|AdODIS')){ $rm++ }elseif($x){ $c+=$x } }; if($rm -gt 0){ $k.SetValue('Path',($c -join ';'),[Microsoft.Win32.RegistryValueKind]::ExpandString) }; $k.Close(); Write-Output $rm }else{ Write-Output 0 } }else{ Write-Output 0 }"') do set "PATH_CLEANED=%%r"
+if !PATH_CLEANED! gtr 0 echo  !PATH_CLEANED! dead entries removed.
+if !PATH_CLEANED! equ 0 echo  !CGRN!clean.!R!
+echo  SYSTEM-PATH: !PATH_CLEANED! dead entries removed >> "!LOGFILE!"
+echo [!time:~0,8!] System PATH: !PATH_CLEANED! entries removed >> "!CLOG!"
 echo.
 
 REM --- PendingFileRenameOperations cleanup ---
@@ -1893,10 +1948,8 @@ REM --- Service flush: clear in-memory reboot state ---
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT!Flushing installer services...!R!"
 net stop msiserver /y >nul 2>&1
 net start msiserver >nul 2>&1
-net stop winmgmt /y >nul 2>&1
-net start winmgmt >nul 2>&1
 echo  !CGRN!done.!R!
-echo  SERVICE FLUSH: msiserver + winmgmt restarted >> "!LOGFILE!"
+echo  SERVICE FLUSH: msiserver restarted >> "!LOGFILE!"
 
 echo  === FULL CLEAN COMPLETE === >> "!LOGFILE!"
 
@@ -2063,6 +2116,15 @@ del /f "%LOCALAPPDATA%\Autodesk\Web Services\LoginState.xml" >nul 2>&1
 del /q /f "%temp%\*" >nul 2>&1
 for /d %%d in ("%temp%\*") do rd /s /q "%%d" 2>nul
 echo  !CGRN!done.!R!
+REM --- System temp Autodesk cleanup ---
+<nul set /p "=    System temp..."
+for /f "tokens=*" %%f in ('dir /b /ad "C:\Windows\Temp\*Autodesk*" 2^>nul') do (
+    rd /s /q "C:\Windows\Temp\%%f" 2>nul
+)
+for /f "tokens=*" %%f in ('dir /b "C:\Windows\Temp\*Autodesk*" 2^>nul') do (
+    del /f /q "C:\Windows\Temp\%%f" 2>nul
+)
+echo  !CGRN!done.!R!
 
 echo.
 REM Kill again before folder deletion - component uninstallers may have spawned processes
@@ -2107,6 +2169,7 @@ for %%d in (
     "C:\Program Files (x86)\Common Files\Autodesk"
     "C:\ProgramData\Autodesk"
     "C:\Users\Public\Documents\Autodesk"
+    "C:\Users\Public\Autodesk"
     "C:\Autodesk"
     "C:\Program Files\Common Files\Macrovision Shared"
 ) do (
@@ -2301,10 +2364,17 @@ for %%k in (
         echo  !CGRN!deleted.!R!
     )
 )
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 (
-    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" /f >nul 2>&1
-    echo    ADSKFLEX_LICENSE_FILE... deleted.
+for %%v in (ADSKFLEX_LICENSE_FILE ADSK_LICENSE_FILE AUTODESK_LICENSE_FILE FLEXLM_TIMEOUT) do (
+    reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" /f >nul 2>&1
+        echo    Removed env var: %%v
+    )
+    reg query "HKCU\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        reg delete "HKCU\Environment" /v "%%v" /f >nul 2>&1
+        echo    Removed user env var: %%v
+    )
 )
 
 echo.
@@ -2400,6 +2470,35 @@ if !DC_IFEO! gtr 0 echo    !DC_IFEO! IFEO debugger blocks removed.
 if !DC_IFEO! equ 0 echo    No IFEO blocks found.
 echo [!time:~0,8!] Deep Clean: !DC_IFEO! IFEO blocks >> "!CLOG!"
 
+REM --- Installer\Products ghost cleanup ---
+<nul set /p "=  !DIM![!time:~0,8!]!R! Cleaning Installer\Products ghosts..."
+set DC_IP=0
+reg export "HKLM\SOFTWARE\Classes\Installer\Products" "!LOGDIR!\installer_products_backup.reg" /y >nul 2>&1
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\Installer\Products" /s /v "ProductName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "IP_KEY=%%k"
+    set "IP_MATCH=0"
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "ProductName" 2^>nul ^| findstr /i "ProductName"') do (
+        echo "%%b" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 set "IP_MATCH=1"
+    )
+    if !IP_MATCH! equ 1 (
+        reg delete "%%k" /f >nul 2>&1
+        set /a DC_IP+=1
+    )
+)
+if !DC_IP! gtr 0 echo  !DC_IP! ghost entries removed.
+if !DC_IP! equ 0 echo  clean.
+echo [!time:~0,8!] Deep Clean: Installer\Products !DC_IP! ghosts >> "!CLOG!"
+
+REM --- System PATH cleanup ---
+<nul set /p "=  !DIM![!time:~0,8!]!R! Cleaning system PATH..."
+reg export "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" "!LOGDIR!\system_path_backup.reg" /y >nul 2>&1
+set DC_PATH=0
+for /f "delims=" %%r in ('powershell -NoProfile -Command "$k=[Microsoft.Win32.Registry]::LocalMachine.OpenSubKey('SYSTEM\CurrentControlSet\Control\Session Manager\Environment',$true); if($k){ $v=$k.GetValue('Path','', [Microsoft.Win32.RegistryValueOptions]::DoNotExpandEnvironmentNames); if($v){ $e=$v -split ';'; $c=@(); $rm=0; foreach($x in $e){ if($x -and ($x -match 'Autodesk|AdODIS')){ $rm++ }elseif($x){ $c+=$x } }; if($rm -gt 0){ $k.SetValue('Path',($c -join ';'),[Microsoft.Win32.RegistryValueKind]::ExpandString) }; $k.Close(); Write-Output $rm }else{ Write-Output 0 } }else{ Write-Output 0 }"') do set "DC_PATH=%%r"
+if !DC_PATH! gtr 0 echo  !DC_PATH! dead entries removed.
+if !DC_PATH! equ 0 echo  clean.
+echo [!time:~0,8!] Deep Clean: PATH !DC_PATH! entries removed >> "!CLOG!"
+
 REM --- PendingFileRenameOperations cleanup ---
 echo [!time:~0,8!] Deep Clean: checking PFRO >> "!CLOG!"
 <nul set /p "=  !DIM![!time:~0,8!]!R! Checking PendingFileRenameOperations..."
@@ -2462,13 +2561,76 @@ if defined DC_LOCKED (
     )
 )
 echo.
+REM --- Multi-user registry cleanup ---
+echo  !DIM![!time:~0,8!]!R! !CWHT!Cleaning other user profiles...!R!
+set MU_CLEANED=0
+set MU_SKIPPED=0
+for /f "tokens=*" %%s in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" 2^>nul ^| findstr "S-1-5-21"') do (
+    set "MU_SID=%%~nxs"
+    set "MU_PATH="
+    for /f "tokens=2,*" %%a in ('reg query "%%s" /v ProfileImagePath 2^>nul ^| findstr /i "ProfileImagePath"') do set "MU_PATH=%%b"
+    if defined MU_PATH call set "MU_PATH=!MU_PATH!"
+    if defined MU_PATH (
+        for %%n in ("!MU_PATH!") do set "MU_NAME=%%~nxn"
+        if /i "!MU_PATH!" neq "!USERPROFILE!" (
+            set "MU_DAT=!MU_PATH!\NTUSER.DAT"
+            if exist "!MU_DAT!" (
+                reg query "HKU\!MU_SID!" >nul 2>&1
+                if !errorlevel! equ 0 (
+                    set /a MU_SKIPPED+=1
+                )
+                if !errorlevel! neq 0 (
+                    reg load "HKU\TEMP_!MU_NAME!" "!MU_DAT!" >nul 2>&1
+                    if !errorlevel! equ 0 (
+                        reg query "HKU\TEMP_!MU_NAME!\Software\Autodesk" >nul 2>&1
+                        if !errorlevel! equ 0 (
+                            reg delete "HKU\TEMP_!MU_NAME!\Software\Autodesk" /f >nul 2>&1
+                            set /a MU_CLEANED+=1
+                            echo      !MU_NAME!: Autodesk registry cleaned
+                        )
+                        ping -n 3 127.0.0.1 >nul 2>&1
+                        reg unload "HKU\TEMP_!MU_NAME!" >nul 2>&1
+                    )
+                )
+            )
+        )
+    )
+)
+if !MU_CLEANED! gtr 0 echo    !MU_CLEANED! other user profiles cleaned.
+if !MU_SKIPPED! gtr 0 echo    !DIM!!MU_SKIPPED! profiles skipped ^(users logged in^).!R!
+if !MU_CLEANED! equ 0 if !MU_SKIPPED! equ 0 echo    No other user profiles found.
+echo  MULTI-USER: !MU_CLEANED! cleaned, !MU_SKIPPED! skipped >> "!LOGFILE!"
+echo [!time:~0,8!] Multi-user: !MU_CLEANED! cleaned, !MU_SKIPPED! skipped >> "!CLOG!"
+
+REM --- Multi-user AppData cleanup ---
+for /f "tokens=*" %%s in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\ProfileList" 2^>nul ^| findstr "S-1-5-21"') do (
+    set "MU_SID=%%~nxs"
+    set "MU_PATH="
+    for /f "tokens=2,*" %%a in ('reg query "%%s" /v ProfileImagePath 2^>nul ^| findstr /i "ProfileImagePath"') do set "MU_PATH=%%b"
+    if defined MU_PATH call set "MU_PATH=!MU_PATH!"
+    if defined MU_PATH (
+        if /i "!MU_PATH!" neq "!USERPROFILE!" (
+            set "MU_AD_SKIP=0"
+            reg query "HKU\!MU_SID!" >nul 2>&1
+            if !errorlevel! equ 0 set "MU_AD_SKIP=1"
+            if !MU_AD_SKIP! equ 0 (
+                if exist "!MU_PATH!\AppData\Roaming\Autodesk" (
+                    rd /s /q "!MU_PATH!\AppData\Roaming\Autodesk" 2>nul
+                )
+                if exist "!MU_PATH!\AppData\Local\Autodesk" (
+                    rd /s /q "!MU_PATH!\AppData\Local\Autodesk" 2>nul
+                )
+            )
+        )
+    )
+)
+
+echo.
 REM --- Service flush: clear in-memory reboot state ---
 echo [!time:~0,8!] Deep Clean: service flush >> "!CLOG!"
 <nul set /p "=  Flushing installer services..."
 net stop msiserver /y >nul 2>&1
 net start msiserver >nul 2>&1
-net stop winmgmt /y >nul 2>&1
-net start winmgmt >nul 2>&1
 echo  done.
 
 echo.
@@ -2504,11 +2666,11 @@ echo ======================================================== >> "!CLOG!"
 echo Autodesk Remnant Scan - %date% %time% > "!SCANFILE!"
 echo ================================================ >> "!SCANFILE!"
 
-echo  !DIM!Scanning 14 areas... progress shown below.!R!
+echo  !DIM!Scanning 15 areas... progress shown below.!R!
 echo.
 
 REM === 1. REGISTERED PRODUCTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 1/14]!R! Registered products............ "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 1/15]!R! Registered products............ "
 set RS_PROD=0
 echo --- REGISTERED PRODUCTS --- >> "!SCANFILE!"
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "Publisher" 2^>nul ^| findstr /i "Autodesk"') do (
@@ -2528,10 +2690,10 @@ if !RS_PROD! gtr 0 (
 if !RS_PROD! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [1/14] Products: !RS_PROD! >> "!CLOG!"
+echo [!time:~0,8!] Scan [1/15] Products: !RS_PROD! >> "!CLOG!"
 
 REM === 2. RUNNING PROCESSES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 2/14]!R! Running processes.............. "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 2/15]!R! Running processes.............. "
 set RS_PROC=0
 echo --- RUNNING PROCESSES --- >> "!SCANFILE!"
 set "PROC_TMP=!LOGDIR!\proc_check.tmp"
@@ -2555,10 +2717,10 @@ if !RS_PROC! gtr 0 (
 if !RS_PROC! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [2/14] Processes: !RS_PROC! >> "!CLOG!"
+echo [!time:~0,8!] Scan [2/15] Processes: !RS_PROC! >> "!CLOG!"
 
 REM === 3. SERVICES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 3/14]!R! Services....................... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 3/15]!R! Services....................... "
 set RS_SVC=0
 echo --- SERVICES --- >> "!SCANFILE!"
 for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
@@ -2576,10 +2738,10 @@ if !RS_SVC! gtr 0 (
 if !RS_SVC! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [3/14] Services: !RS_SVC! >> "!CLOG!"
+echo [!time:~0,8!] Scan [3/15] Services: !RS_SVC! >> "!CLOG!"
 
 REM === 4. PROGRAM FILES FOLDERS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 4/14]!R! Program Files folders.......... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 4/15]!R! Program Files folders.......... "
 set RS_PF=0
 echo --- FOLDERS IN PROGRAM FILES --- >> "!SCANFILE!"
 for %%d in (
@@ -2605,10 +2767,10 @@ if !RS_PF! gtr 0 (
 if !RS_PF! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [4/14] ProgramFiles: !RS_PF! >> "!CLOG!"
+echo [!time:~0,8!] Scan [4/15] ProgramFiles: !RS_PF! >> "!CLOG!"
 
 REM === 5. DATA FOLDERS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 5/14]!R! Data folders................... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 5/15]!R! Data folders................... "
 set RS_DATA=0
 echo --- DATA FOLDERS --- >> "!SCANFILE!"
 for %%d in (
@@ -2637,10 +2799,10 @@ if !RS_DATA! gtr 0 (
 if !RS_DATA! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [5/14] DataFolders: !RS_DATA! >> "!CLOG!"
+echo [!time:~0,8!] Scan [5/15] DataFolders: !RS_DATA! >> "!CLOG!"
 
 REM === 6. FULL C: DRIVE SEARCH ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/14]!R! Full C: drive search........... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/15]!R! Full C: drive search........... "
 set RS_CDRIVE=0
 echo --- AUTODESK FOLDERS ANYWHERE ON C: --- >> "!SCANFILE!"
 echo  Searching C: drive for Autodesk folders... >> "!SCANFILE!"
@@ -2658,10 +2820,10 @@ if !RS_CDRIVE! gtr 0 (
 if !RS_CDRIVE! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [6/14] CDrive: !RS_CDRIVE! >> "!CLOG!"
+echo [!time:~0,8!] Scan [6/15] CDrive: !RS_CDRIVE! >> "!CLOG!"
 
 REM === 7. REGISTRY HIVES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 7/14]!R! Registry hives................. "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 7/15]!R! Registry hives................. "
 set RS_REG=0
 echo --- REGISTRY HIVES --- >> "!SCANFILE!"
 for %%k in (
@@ -2688,10 +2850,10 @@ if !RS_REG! gtr 0 (
 if !RS_REG! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [7/14] Registry: !RS_REG! >> "!CLOG!"
+echo [!time:~0,8!] Scan [7/15] Registry: !RS_REG! >> "!CLOG!"
 
 REM === 8. REGISTRY DEEP SCAN - COM ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 8/14]!R! Registry deep scan - COM....... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 8/15]!R! Registry deep scan - COM....... "
 set RS_COM=0
 echo --- REGISTRY DEEP SCAN --- >> "!SCANFILE!"
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\CLSID" /s /d /f "Autodesk" 2^>nul ^| findstr /i "HKEY_"') do (
@@ -2710,10 +2872,10 @@ if !RS_COM! gtr 0 (
 if !RS_COM! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [8/14] COM: !RS_COM! >> "!CLOG!"
+echo [!time:~0,8!] Scan [8/15] COM: !RS_COM! >> "!CLOG!"
 
 REM === 9. REGISTRY DEEP SCAN - CLASSES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 9/14]!R! Registry deep scan - classes... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 9/15]!R! Registry deep scan - classes... "
 set RS_CLASS=0
 echo --- AUTODESK-SPECIFIC CLASS KEYS --- >> "!SCANFILE!"
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
@@ -2761,10 +2923,10 @@ if !RS_CLASS! gtr 0 (
 if !RS_CLASS! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [9/14] Classes: !RS_CLASS! >> "!CLOG!"
+echo [!time:~0,8!] Scan [9/15] Classes: !RS_CLASS! >> "!CLOG!"
 
 REM === 10. SHELL EXTENSIONS + UNINSTALL REG ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/14]!R! Shell extensions + uninstall... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/15]!R! Shell extensions + uninstall... "
 set RS_SHELL=0
 echo --- SHELL EXTENSIONS + UNINSTALL REG --- >> "!SCANFILE!"
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s /f "Autodesk" /d 2^>nul ^| findstr /i "Autodesk"') do (
@@ -2789,10 +2951,34 @@ if !RS_SHELL! gtr 0 (
 if !RS_SHELL! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [10/14] Shell: !RS_SHELL! >> "!CLOG!"
+echo [!time:~0,8!] Scan [10/15] Shell: !RS_SHELL! >> "!CLOG!"
 
-REM === 11. SHORTCUTS, TASKS, ENV VARS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/14]!R! Shortcuts, tasks, env vars.... "
+REM === 11. INSTALLER\PRODUCTS GHOSTS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/15]!R! Installer\Products ghosts..... "
+set RS_IP=0
+echo --- INSTALLER PRODUCTS --- >> "!SCANFILE!"
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\Installer\Products" /s /v "ProductName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "IP_MATCH=0"
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "ProductName" 2^>nul ^| findstr /i "ProductName"') do (
+        echo "%%b" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 set "IP_MATCH=1"
+    )
+    if !IP_MATCH! equ 1 (
+        set /a RS_IP+=1
+        echo  INSTALLER-PRODUCT: %%k >> "!SCANFILE!"
+    )
+)
+echo. >> "!SCANFILE!"
+if !RS_IP! gtr 0 (
+    echo !ESC![50G!CYLW!!RS_IP! ghost entries              !R!
+)
+if !RS_IP! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
+echo [!time:~0,8!] Scan [11/15] InstallerProducts: !RS_IP! >> "!CLOG!"
+
+REM === 12. SHORTCUTS, TASKS, ENV VARS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/15]!R! Shortcuts, tasks, env vars.... "
 set RS_OTHER=0
 echo --- SYSTEM PROFILE --- >> "!SCANFILE!"
 if exist "C:\Windows\System32\config\systemprofile\AppData\Local\Autodesk" (
@@ -2835,10 +3021,17 @@ if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
 echo. >> "!SCANFILE!"
 
 echo --- ENV VARIABLES --- >> "!SCANFILE!"
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 (
-    set /a RS_OTHER+=1
-    echo  SET: ADSKFLEX_LICENSE_FILE >> "!SCANFILE!"
+for %%v in (ADSKFLEX_LICENSE_FILE ADSK_LICENSE_FILE AUTODESK_LICENSE_FILE FLEXLM_TIMEOUT) do (
+    reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a RS_OTHER+=1
+        echo  SET: %%v >> "!SCANFILE!"
+    )
+    reg query "HKCU\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a RS_OTHER+=1
+        echo  SET-USER: %%v >> "!SCANFILE!"
+    )
 )
 echo. >> "!SCANFILE!"
 if !RS_OTHER! gtr 0 (
@@ -2847,10 +3040,10 @@ if !RS_OTHER! gtr 0 (
 if !RS_OTHER! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [11/14] Other: !RS_OTHER! >> "!CLOG!"
+echo [!time:~0,8!] Scan [12/15] Other: !RS_OTHER! >> "!CLOG!"
 
 REM === 12. IFEO DEBUGGER BLOCKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/14]!R! IFEO debugger blocks.......... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/15]!R! IFEO debugger blocks.......... "
 set RS_IFEO=0
 set "IFEO_ROOT=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
 for %%x in (!IFEO_EXES!) do (
@@ -2867,10 +3060,10 @@ if !RS_IFEO! gtr 0 (
 if !RS_IFEO! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [12/14] IFEO: !RS_IFEO! >> "!CLOG!"
+echo [!time:~0,8!] Scan [13/15] IFEO: !RS_IFEO! >> "!CLOG!"
 
 REM === 13. PENDING FILE RENAME OPERATIONS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/14]!R! PendingFileRenameOps......... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/15]!R! PendingFileRenameOps......... "
 set RS_PFRO=0
 echo --- PENDING FILE RENAME OPERATIONS --- >> "!SCANFILE!"
 for /f "tokens=*" %%v in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v PendingFileRenameOperations 2^>nul ^| findstr /i "Autodesk"') do (
@@ -2893,10 +3086,10 @@ if !errorlevel! equ 0 (
     set /a RS_PFRO+=1
     echo  REBOOT-FLAG: Orchestrator RebootRequired >> "!SCANFILE!"
 )
-echo [!time:~0,8!] Scan [13/14] PFRO: !RS_PFRO! >> "!CLOG!"
+echo [!time:~0,8!] Scan [14/15] PFRO: !RS_PFRO! >> "!CLOG!"
 
 REM === 14. HOSTS FILE ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/14]!R! Hosts file................... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/15]!R! Hosts file................... "
 set RS_HOSTS=0
 echo --- HOSTS FILE --- >> "!SCANFILE!"
 if exist "%WINDIR%\System32\drivers\etc\hosts" (
@@ -2911,10 +3104,10 @@ if !RS_HOSTS! gtr 0 (
 if !RS_HOSTS! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Scan [14/14] Hosts: !RS_HOSTS! >> "!CLOG!"
+echo [!time:~0,8!] Scan [15/15] Hosts: !RS_HOSTS! >> "!CLOG!"
 
 REM === SUMMARY TABLE ===
-set /a RS_TOTAL=RS_PROD+RS_PROC+RS_SVC+RS_PF+RS_DATA+RS_CDRIVE+RS_REG+RS_COM+RS_CLASS+RS_SHELL+RS_OTHER+RS_IFEO+RS_PFRO+RS_HOSTS
+set /a RS_TOTAL=RS_PROD+RS_PROC+RS_SVC+RS_PF+RS_DATA+RS_CDRIVE+RS_REG+RS_COM+RS_CLASS+RS_SHELL+RS_IP+RS_OTHER+RS_IFEO+RS_PFRO+RS_HOSTS
 echo.
 echo  ============================================================
 echo   !CWHT!!BOLD!REMNANT SCAN COMPLETE - Summary!R!
@@ -2952,6 +3145,9 @@ if !RS_CLASS! equ 0 ( <nul set /p "=  File association class keys      !CGRN!0!R
 echo.
 if !RS_SHELL! gtr 0 ( <nul set /p "=  Shell extensions + uninstall reg !CRED!!RS_SHELL!!R!" )
 if !RS_SHELL! equ 0 ( <nul set /p "=  Shell extensions + uninstall reg !CGRN!0!R!" )
+echo.
+if !RS_IP! gtr 0 ( <nul set /p "=  Installer\Products ghosts        !CRED!!RS_IP!!R!" )
+if !RS_IP! equ 0 ( <nul set /p "=  Installer\Products ghosts        !CGRN!0!R!" )
 echo.
 if !RS_OTHER! gtr 0 ( <nul set /p "=  Shortcuts, tasks, env vars       !CRED!!RS_OTHER!!R!" )
 if !RS_OTHER! equ 0 ( <nul set /p "=  Shortcuts, tasks, env vars       !CGRN!0!R!" )
@@ -3019,7 +3215,7 @@ echo  !DIM!Please wait...!R!
 echo.
 
 REM === 1. INSTALLED PRODUCTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 1/16]!R! Installed products............... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 1/17]!R! Installed products............... "
 set AU_PROD=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  1. INSTALLED AUTODESK PRODUCTS >> "!AUDITFILE!"
@@ -3050,7 +3246,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Window
     )
 )
 set /a AUDIT_TOTAL+=AU_PROD
-echo [!time:~0,8!] Audit [1/16] Products: !AU_PROD! >> "!CLOG!"
+echo [!time:~0,8!] Audit [1/17] Products: !AU_PROD! >> "!CLOG!"
 if !AU_PROD! gtr 0 (
     echo !ESC![50G!CRED!!AU_PROD! found                    !R!
     echo  TOTAL: !AU_PROD! products >> "!AUDITFILE!"
@@ -3062,7 +3258,7 @@ if !AU_PROD! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 2. RUNNING PROCESSES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 2/16]!R! Running processes................ "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 2/17]!R! Running processes................ "
 set AU_PROC=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  2. RUNNING AUTODESK PROCESSES >> "!AUDITFILE!"
@@ -3082,7 +3278,7 @@ for %%p in (!KILL_PROCS_SCAN!) do (
 )
 del "!PROC_TMP!" >nul 2>&1
 set /a AUDIT_TOTAL+=AU_PROC
-echo [!time:~0,8!] Audit [2/16] Processes: !AU_PROC! >> "!CLOG!"
+echo [!time:~0,8!] Audit [2/17] Processes: !AU_PROC! >> "!CLOG!"
 if !AU_PROC! gtr 0 (
     echo !ESC![50G!CRED!!AU_PROC! found                    !R!
     echo  TOTAL: !AU_PROC! processes >> "!AUDITFILE!"
@@ -3094,7 +3290,7 @@ if !AU_PROC! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 3. SERVICES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 3/16]!R! Services......................... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 3/17]!R! Services......................... "
 set AU_SVC=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  3. AUTODESK SERVICES >> "!AUDITFILE!"
@@ -3107,7 +3303,7 @@ for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "Flex
     )
 )
 set /a AUDIT_TOTAL+=AU_SVC
-echo [!time:~0,8!] Audit [3/16] Services: !AU_SVC! >> "!CLOG!"
+echo [!time:~0,8!] Audit [3/17] Services: !AU_SVC! >> "!CLOG!"
 if !AU_SVC! gtr 0 (
     echo !ESC![50G!CRED!!AU_SVC! found                    !R!
     echo  TOTAL: !AU_SVC! services >> "!AUDITFILE!"
@@ -3119,7 +3315,7 @@ if !AU_SVC! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 4. FOLDERS WITH FILE COUNTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 4/16]!R! Folders and files................ "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 4/17]!R! Folders and files................ "
 set AU_FOLD=0
 set AU_FILES=0
 set "AU_SIZE_PATHS="
@@ -3161,7 +3357,7 @@ if !AU_FOLD! gtr 0 (
     for /f "tokens=*" %%s in ('powershell -NoProfile -Command "$p=@(!AU_SIZE_PATHS!$null); $t=0; foreach($d in $p){if($d -and (Test-Path $d)){try{$t+=(Get-ChildItem $d -Recurse -Force -ErrorAction SilentlyContinue|Measure-Object Length -Sum).Sum}catch{}}}; if($t -gt 1073741824){'{0:N2} GB' -f ($t/1GB)}elseif($t -gt 1048576){'{0:N0} MB' -f ($t/1MB)}else{'{0:N0} KB' -f ($t/1KB)}" 2^>nul') do set "AU_TOTAL_SIZE=%%s"
 )
 set /a AUDIT_TOTAL+=AU_FOLD
-echo [!time:~0,8!] Audit [4/16] Folders: !AU_FOLD! >> "!CLOG!"
+echo [!time:~0,8!] Audit [4/17] Folders: !AU_FOLD! >> "!CLOG!"
 if !AU_FOLD! gtr 0 (
     echo !ESC![50G!CRED!!AU_FOLD! folders, !AU_FILES! files       !R!
 )
@@ -3172,7 +3368,7 @@ if !AU_FOLD! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 5. C: DRIVE SEARCH ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 5/16]!R! Other Autodesk folders on C:..... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 5/17]!R! Other Autodesk folders on C:..... "
 set AU_OTHER=0
 set AU_INSTALLER=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
@@ -3241,10 +3437,10 @@ if !AU_STEP5_SHOWN! equ 0 (
     echo  None found. >> "!AUDITFILE!"
 )
 echo. >> "!AUDITFILE!"
-echo [!time:~0,8!] Audit [5/16] CDrive: !AU_OTHER! >> "!CLOG!"
+echo [!time:~0,8!] Audit [5/17] CDrive: !AU_OTHER! >> "!CLOG!"
 
 REM === 6. REGISTRY HIVES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/16]!R! Registry hives................... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/17]!R! Registry hives................... "
 set AU_REG=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  6. AUTODESK REGISTRY HIVES >> "!AUDITFILE!"
@@ -3269,7 +3465,7 @@ for %%k in (
     )
 )
 set /a AUDIT_TOTAL+=AU_REG
-echo [!time:~0,8!] Audit [6/16] Registry: !AU_REG! >> "!CLOG!"
+echo [!time:~0,8!] Audit [6/17] Registry: !AU_REG! >> "!CLOG!"
 if !AU_REG! gtr 0 (
     echo !ESC![50G!CRED!!AU_REG! hives                    !R!
 )
@@ -3280,7 +3476,7 @@ if !AU_REG! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 7. USER FILE ASSOCIATIONS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 7/16]!R! User file associations........... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 7/17]!R! User file associations........... "
 set AU_ASSOC=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  7. USER FILE ASSOCIATIONS (HKCU\Classes) >> "!AUDITFILE!"
@@ -3308,7 +3504,7 @@ if !errorlevel! equ 0 (
     echo   HKCU\SOFTWARE\Classes\dwgviewr.9128.409 >> "!AUDITFILE!"
 )
 set /a AUDIT_TOTAL+=AU_ASSOC
-echo [!time:~0,8!] Audit [7/16] Assoc: !AU_ASSOC! >> "!CLOG!"
+echo [!time:~0,8!] Audit [7/17] Assoc: !AU_ASSOC! >> "!CLOG!"
 if !AU_ASSOC! gtr 0 (
     echo !ESC![50G!CYLW!!AU_ASSOC! entries                  !R!
     echo  TOTAL: !AU_ASSOC! class entries >> "!AUDITFILE!"
@@ -3320,7 +3516,7 @@ if !AU_ASSOC! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 8. COM OBJECTS AND CLSID ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 8/16]!R! COM objects and CLSIDs........... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 8/17]!R! COM objects and CLSIDs........... "
 set AU_COM=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  8. COM OBJECTS AND CLSIDs >> "!AUDITFILE!"
@@ -3341,7 +3537,7 @@ for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes\CLSID" /s /f "Autode
     echo   User CLSID: %%k >> "!AUDITFILE!"
 )
 set /a AUDIT_TOTAL+=AU_COM
-echo [!time:~0,8!] Audit [8/16] COM: !AU_COM! >> "!CLOG!"
+echo [!time:~0,8!] Audit [8/17] COM: !AU_COM! >> "!CLOG!"
 if !AU_COM! gtr 0 (
     echo !ESC![50G!CYLW!!AU_COM! entries                  !R!
     echo  TOTAL: !AU_COM! COM entries >> "!AUDITFILE!"
@@ -3353,7 +3549,7 @@ if !AU_COM! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 9. SCHEDULED TASKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 9/16]!R! Scheduled tasks.................. "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 9/17]!R! Scheduled tasks.................. "
 set AU_TASK=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  9. SCHEDULED TASKS >> "!AUDITFILE!"
@@ -3363,7 +3559,7 @@ for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findst
     echo   %%~n >> "!AUDITFILE!"
 )
 set /a AUDIT_TOTAL+=AU_TASK
-echo [!time:~0,8!] Audit [9/16] Tasks: !AU_TASK! >> "!CLOG!"
+echo [!time:~0,8!] Audit [9/17] Tasks: !AU_TASK! >> "!CLOG!"
 if !AU_TASK! gtr 0 (
     echo !ESC![50G!CYLW!!AU_TASK! found                    !R!
 )
@@ -3374,7 +3570,7 @@ if !AU_TASK! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 10. FIREWALL RULES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/16]!R! Firewall rules................... "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/17]!R! Firewall rules................... "
 set AU_FW=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  10. FIREWALL RULES >> "!AUDITFILE!"
@@ -3384,7 +3580,7 @@ for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=a
     echo   %%r >> "!AUDITFILE!"
 )
 set /a AUDIT_TOTAL+=AU_FW
-echo [!time:~0,8!] Audit [10/16] Firewall: !AU_FW! >> "!CLOG!"
+echo [!time:~0,8!] Audit [10/17] Firewall: !AU_FW! >> "!CLOG!"
 if !AU_FW! gtr 0 (
     echo !ESC![50G!CYLW!!AU_FW! rules                     !R!
 )
@@ -3395,7 +3591,7 @@ if !AU_FW! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 11. SHORTCUTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/16]!R! Shortcuts........................ "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/17]!R! Shortcuts........................ "
 set AU_SC=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  11. SHORTCUTS (Desktop, Start Menu, Taskbar) >> "!AUDITFILE!"
@@ -3431,7 +3627,7 @@ for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\Task
     )
 )
 set /a AUDIT_TOTAL+=AU_SC
-echo [!time:~0,8!] Audit [11/16] Shortcuts: !AU_SC! >> "!CLOG!"
+echo [!time:~0,8!] Audit [11/17] Shortcuts: !AU_SC! >> "!CLOG!"
 if !AU_SC! gtr 0 (
     echo !ESC![50G!CYLW!!AU_SC! found                    !R!
 )
@@ -3442,18 +3638,25 @@ if !AU_SC! equ 0 (
 echo. >> "!AUDITFILE!"
 
 REM === 12. ENVIRONMENT VARIABLES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/16]!R! Environment variables............ "
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/17]!R! Environment variables............ "
 set AU_ENV=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  12. ENVIRONMENT VARIABLES >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 (
-    set /a AU_ENV+=1
-    for /f "tokens=2,*" %%a in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" 2^>nul ^| findstr /i "ADSKFLEX"') do echo   ADSKFLEX_LICENSE_FILE = %%b >> "!AUDITFILE!"
+for %%v in (ADSKFLEX_LICENSE_FILE ADSK_LICENSE_FILE AUTODESK_LICENSE_FILE FLEXLM_TIMEOUT) do (
+    reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a AU_ENV+=1
+        echo   %%v = SET >> "!AUDITFILE!"
+    )
+    reg query "HKCU\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a AU_ENV+=1
+        echo   %%v = SET ^(user^) >> "!AUDITFILE!"
+    )
 )
 set /a AUDIT_TOTAL+=AU_ENV
-echo [!time:~0,8!] Audit [12/16] EnvVars: !AU_ENV! >> "!CLOG!"
+echo [!time:~0,8!] Audit [12/17] EnvVars: !AU_ENV! >> "!CLOG!"
 if !AU_ENV! gtr 0 (
     echo !ESC![50G!CYLW!!AU_ENV! set                      !R!
 )
@@ -3463,11 +3666,39 @@ if !AU_ENV! equ 0 (
 )
 echo. >> "!AUDITFILE!"
 
-REM === 13. SHELL EXTENSIONS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/16]!R! Shell extensions.................. "
+REM === 13. INSTALLER\PRODUCTS GHOSTS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/17]!R! Installer\Products ghosts........ "
+set AU_IP=0
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+echo  13. INSTALLER\PRODUCTS GHOSTS >> "!AUDITFILE!"
+echo ------------------------------------------------------------ >> "!AUDITFILE!"
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\Installer\Products" /s /v "ProductName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "IP_MATCH=0"
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "ProductName" 2^>nul ^| findstr /i "ProductName"') do (
+        echo "%%b" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 set "IP_MATCH=1"
+    )
+    if !IP_MATCH! equ 1 (
+        set /a AU_IP+=1
+        echo   %%k >> "!AUDITFILE!"
+    )
+)
+if !AU_IP! equ 0 echo  None found. >> "!AUDITFILE!"
+set /a AUDIT_TOTAL+=AU_IP
+echo [!time:~0,8!] Audit [13/17] InstallerProducts: !AU_IP! >> "!CLOG!"
+if !AU_IP! gtr 0 (
+    echo !ESC![50G!CYLW!!AU_IP! ghost entries              !R!
+)
+if !AU_IP! equ 0 (
+    echo !ESC![50G!CGRN!none                       !R!
+)
+echo. >> "!AUDITFILE!"
+
+REM === 14. SHELL EXTENSIONS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/17]!R! Shell extensions.................. "
 set AU_SHELL=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-echo  13. SHELL EXTENSIONS >> "!AUDITFILE!"
+echo  14. SHELL EXTENSIONS >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 for %%x in (
     "C:\Program Files\Common Files\Autodesk Shared\AcShellEx\AcShellExtension.dll"
@@ -3485,7 +3716,7 @@ for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentV
     echo   Approved: %%b >> "!AUDITFILE!"
 )
 set /a AUDIT_TOTAL+=AU_SHELL
-echo [!time:~0,8!] Audit [13/16] ShellExt: !AU_SHELL! >> "!CLOG!"
+echo [!time:~0,8!] Audit [14/17] ShellExt: !AU_SHELL! >> "!CLOG!"
 if !AU_SHELL! gtr 0 (
     echo !ESC![50G!CYLW!!AU_SHELL! found                    !R!
 )
@@ -3495,11 +3726,11 @@ if !AU_SHELL! equ 0 (
 )
 echo. >> "!AUDITFILE!"
 
-REM === 14. IFEO DEBUGGER BLOCKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/16]!R! IFEO debugger blocks......... "
+REM === 15. IFEO DEBUGGER BLOCKS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/17]!R! IFEO debugger blocks......... "
 set AU_IFEO=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-echo  14. IFEO DEBUGGER BLOCKS >> "!AUDITFILE!"
+echo  15. IFEO DEBUGGER BLOCKS >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 set "IFEO_ROOT=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
 for %%x in (!IFEO_EXES!) do (
@@ -3517,13 +3748,13 @@ if !AU_IFEO! gtr 0 (
 if !AU_IFEO! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Audit [14/16] IFEO: !AU_IFEO! >> "!CLOG!"
+echo [!time:~0,8!] Audit [15/17] IFEO: !AU_IFEO! >> "!CLOG!"
 
-REM === 15. PENDING FILE RENAME OPERATIONS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/16]!R! PendingFileRenameOps......... "
+REM === 16. PENDING FILE RENAME OPERATIONS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![16/17]!R! PendingFileRenameOps......... "
 set AU_PFRO=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-echo  15. PENDING FILE RENAME OPERATIONS >> "!AUDITFILE!"
+echo  16. PENDING FILE RENAME OPERATIONS >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 for /f "tokens=*" %%v in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v PendingFileRenameOperations 2^>nul ^| findstr /i "Autodesk"') do (
     set /a AU_PFRO+=1
@@ -3537,7 +3768,7 @@ if !AU_PFRO! gtr 0 (
 if !AU_PFRO! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Audit [15/16] PFRO >> "!CLOG!"
+echo [!time:~0,8!] Audit [16/17] PFRO >> "!CLOG!"
 reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" >nul 2>&1
 if !errorlevel! equ 0 (
     set /a AU_PFRO+=1
@@ -3549,11 +3780,11 @@ if !errorlevel! equ 0 (
     echo   RebootRequired: WindowsUpdate Orchestrator >> "!AUDITFILE!"
 )
 
-REM === 16. HOSTS FILE ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![16/16]!R! Hosts file................... "
+REM === 17. HOSTS FILE ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![17/17]!R! Hosts file................... "
 set AU_HOSTS=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-echo  16. HOSTS FILE >> "!AUDITFILE!"
+echo  17. HOSTS FILE >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 if exist "%WINDIR%\System32\drivers\etc\hosts" (
     for /f "tokens=*" %%h in ('findstr /i /v "^#" "%WINDIR%\System32\drivers\etc\hosts" 2^>nul ^| findstr /i "autodesk"') do (
@@ -3569,7 +3800,7 @@ if !AU_HOSTS! gtr 0 (
 if !AU_HOSTS! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
-echo [!time:~0,8!] Audit [16/16] Hosts >> "!CLOG!"
+echo [!time:~0,8!] Audit [17/17] Hosts >> "!CLOG!"
 
 REM === SUMMARY ===
 echo.
@@ -4222,7 +4453,7 @@ echo  Phase 2: Clearing all pending reboot state...
 echo.
 <nul set /p "=  Clearing registry flags..."
 if !RB_PFRO! equ 1 (
-    powershell -Command "$val = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations; if ($val) { $clean = $val | Where-Object { $_ -notmatch 'Autodesk|AdODIS|AdskLicensing|adsk' }; if ($clean.Count -eq 0) { Remove-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -Force -ErrorAction SilentlyContinue } else { Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -Value $clean -ErrorAction SilentlyContinue } }" >nul 2>&1
+    reg delete "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v PendingFileRenameOperations /f >nul 2>&1
 )
 if !RB_WU! equ 1 reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" /f >nul 2>&1
 if !RB_ORCH! equ 1 reg delete "HKLM\SOFTWARE\Microsoft\WindowsUpdate\Orchestrator\RebootRequired" /f >nul 2>&1
@@ -4236,18 +4467,13 @@ net stop msiserver /y >nul 2>&1
 net start msiserver >nul 2>&1
 echo  !CGRN!done.!R!
 
-<nul set /p "=  Flushing WMI service..."
-net stop winmgmt /y >nul 2>&1
-net start winmgmt >nul 2>&1
-echo  !CGRN!done.!R!
-
 echo.
 echo [!time:~0,8!] Fix Reboot Pending: !RB_ISSUES! flags cleared >> "!CLOG!"
 echo  !CGRN!!BOLD!All pending reboot states cleared.!R!
 echo.
-echo  !CWHT!You can now install Autodesk products without restarting.!R!
-echo  !DIM!If the installer still shows "restart pending", reboot once!R!
-echo  !DIM!using Start Menu - Restart, not Shut Down.!R!
+echo  !CWHT!A system reboot is recommended but not required.!R!
+echo  !DIM!You can proceed with Autodesk installation without rebooting.!R!
+echo  !DIM!If you encounter issues, restart using Start Menu - Restart.!R!
 echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
@@ -4311,7 +4537,11 @@ if !BK_FOUND! equ 0 (
 echo  !CWHT!!BK_COUNT! Autodesk data folders found.!R!
 echo [!time:~0,8!] Backup: !BK_COUNT! data folders found >> "!CLOG!"
 echo.
+set "BK_DT="
 for /f "tokens=2 delims==" %%d in ('wmic os get localdatetime /value 2^>nul') do set "BK_DT=%%d"
+if not defined BK_DT (
+    for /f "delims=" %%d in ('powershell -NoProfile -Command "Get-Date -Format yyyyMMddHHmmss"') do set "BK_DT=%%d"
+)
 set "BK_DATESTAMP=!BK_DT:~0,8!"
 echo  !DIM!Backup will be saved to:!R!
 set "BK_DIR=!LOGDIR!\Autodesk_Backup_!BK_DATESTAMP!"
@@ -4390,7 +4620,7 @@ echo VERIFICATION DETAILS - %date% %time% >> "!VLOG!"
 echo ================================================ >> "!VLOG!"
 
 REM === 1. REGISTERED PRODUCTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![1/15]!R! Installed products..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![1/16]!R! Installed products..."
 set VP=0
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
     set "V_PUB="
@@ -4419,10 +4649,10 @@ if !VP! gtr 0 (
     set /a RM+=VP
 )
 if !VP! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [1/15] Products: !VP! >> "!CLOG!"
+echo [!time:~0,8!] Verify [1/16] Products: !VP! >> "!CLOG!"
 
 REM === 2. RUNNING PROCESSES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![2/15]!R! Processes..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![2/16]!R! Processes..."
 set PR=0
 set "PROC_TMP=!LOGDIR!\proc_check.tmp"
 type nul > "!PROC_TMP!"
@@ -4442,10 +4672,10 @@ if !PR! gtr 0 (
     set /a RM+=PR
 )
 if !PR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [2/15] Processes: !PR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [2/16] Processes: !PR! >> "!CLOG!"
 
 REM === 3. SERVICES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![3/15]!R! Services..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![3/16]!R! Services..."
 set SR=0
 for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
@@ -4459,10 +4689,10 @@ if !SR! gtr 0 (
     set /a RM+=SR
 )
 if !SR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [3/15] Services: !SR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [3/16] Services: !SR! >> "!CLOG!"
 
 REM === 4. PROGRAM FOLDERS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![4/15]!R! Program folders..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![4/16]!R! Program folders..."
 set FR=0
 for %%d in (
     "C:\Program Files\Autodesk"
@@ -4475,6 +4705,7 @@ for %%d in (
     "C:\Autodesk"
     "C:\Program Files\Common Files\Macrovision Shared"
     "C:\Users\Public\Documents\Autodesk"
+    "C:\Users\Public\Autodesk"
 ) do (
     if exist %%d (
         set /a FR+=1
@@ -4486,10 +4717,10 @@ if !FR! gtr 0 (
     set /a RM+=FR
 )
 if !FR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [4/15] Folders: !FR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [4/16] Folders: !FR! >> "!CLOG!"
 
 REM === 5. USER DATA FOLDERS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![5/15]!R! User data folders..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![5/16]!R! User data folders..."
 set UF=0
 for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Programs\Autodesk" "%LOCALAPPDATA%\Temp\odis_download_dest") do (
     if exist "%%~d" (
@@ -4507,10 +4738,10 @@ if !UF! gtr 0 (
     set /a RM+=UF
 )
 if !UF! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [5/15] UserData: !UF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [5/16] UserData: !UF! >> "!CLOG!"
 
 REM === 6. AUTODESK REGISTRY HIVES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![6/15]!R! Registry hives..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![6/16]!R! Registry hives..."
 set RR=0
 for %%k in (
     "HKLM\SOFTWARE\Autodesk"
@@ -4533,10 +4764,10 @@ if !RR! gtr 0 (
     set /a RM+=RR
 )
 if !RR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [6/15] RegHives: !RR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [6/16] RegHives: !RR! >> "!CLOG!"
 
 REM === 7. REGISTRY DEEP SCAN - Autodesk-specific only ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![7/15]!R! Registry deep scan..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![7/16]!R! Registry deep scan..."
 set RD=0
 REM Check for Autodesk-specific HKCU class keys
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
@@ -4588,10 +4819,10 @@ if !RD! gtr 0 (
     set /a RM+=RD
 )
 if !RD! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [7/15] RegDeep: !RD! >> "!CLOG!"
+echo [!time:~0,8!] Verify [7/16] RegDeep: !RD! >> "!CLOG!"
 
 REM === 8. LEGACY LICENSING ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![8/15]!R! Legacy licensing..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![8/16]!R! Legacy licensing..."
 set LL=0
 if exist "C:\ProgramData\Autodesk\CLM" (
     set /a LL+=1
@@ -4613,25 +4844,53 @@ if !LL! gtr 0 (
     set /a RM+=LL
 )
 if !LL! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [8/15] Licensing: !LL! >> "!CLOG!"
+echo [!time:~0,8!] Verify [8/16] Licensing: !LL! >> "!CLOG!"
 
 REM === 9. ENV VARIABLES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![9/15]!R! Env variables..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![9/16]!R! Env variables..."
 set EV=0
-reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "ADSKFLEX_LICENSE_FILE" >nul 2>&1
-if !errorlevel! equ 0 (
-    set /a EV+=1
-    echo   ENV: ADSKFLEX_LICENSE_FILE >> "!VLOG!"
+for %%v in (ADSKFLEX_LICENSE_FILE ADSK_LICENSE_FILE AUTODESK_LICENSE_FILE FLEXLM_TIMEOUT) do (
+    reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a EV+=1
+        echo   ENV: %%v >> "!VLOG!"
+    )
+    reg query "HKCU\Environment" /v "%%v" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a EV+=1
+        echo   ENV-USER: %%v >> "!VLOG!"
+    )
 )
 if !EV! gtr 0 (
-    echo  !CRED!ADSKFLEX SET!R!
+    echo  !CRED!!EV! env vars SET!R!
     set /a RM+=EV
 )
 if !EV! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [9/15] EnvVars: !EV! >> "!CLOG!"
+echo [!time:~0,8!] Verify [9/16] EnvVars: !EV! >> "!CLOG!"
 
-REM === 10. SHORTCUTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/15]!R! Shortcuts..."
+REM === 10. INSTALLER\PRODUCTS GHOSTS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/16]!R! Installer\Products..."
+set IPV=0
+for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\Installer\Products" /s /v "ProductName" 2^>nul ^| findstr /i "HKEY_"') do (
+    set "IP_MATCH=0"
+    for /f "tokens=2,*" %%a in ('reg query "%%k" /v "ProductName" 2^>nul ^| findstr /i "ProductName"') do (
+        echo "%%b" | findstr /i "Autodesk" >nul 2>&1
+        if !errorlevel! equ 0 set "IP_MATCH=1"
+    )
+    if !IP_MATCH! equ 1 (
+        set /a IPV+=1
+        echo   INSTALLER-PRODUCT: %%k >> "!VLOG!"
+    )
+)
+if !IPV! gtr 0 (
+    echo  !CYLW!!IPV! ghost entries!R!
+    set /a RM+=IPV
+)
+if !IPV! equ 0 echo  !CGRN!CLEAN!R!
+echo [!time:~0,8!] Verify [10/16] InstallerProducts: !IPV! >> "!CLOG!"
+
+REM === 11. SHORTCUTS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/16]!R! Shortcuts..."
 set SV=0
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
@@ -4668,10 +4927,10 @@ if !SV! gtr 0 (
     set /a RM+=SV
 )
 if !SV! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [10/15] Shortcuts: !SV! >> "!CLOG!"
+echo [!time:~0,8!] Verify [11/16] Shortcuts: !SV! >> "!CLOG!"
 
-REM === 11. SCHEDULED TASKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/15]!R! Scheduled tasks..."
+REM === 12. SCHEDULED TASKS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/16]!R! Scheduled tasks..."
 set TK=0
 for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findstr /i "Autodesk"') do (
     set /a TK+=1
@@ -4682,10 +4941,10 @@ if !TK! gtr 0 (
     set /a RM+=TK
 )
 if !TK! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [11/15] Tasks: !TK! >> "!CLOG!"
+echo [!time:~0,8!] Verify [12/16] Tasks: !TK! >> "!CLOG!"
 
-REM === 12. FIREWALL RULES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/15]!R! Firewall rules..."
+REM === 13. FIREWALL RULES ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/16]!R! Firewall rules..."
 set FW=0
 for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
     set /a FW+=1
@@ -4696,10 +4955,10 @@ if !FW! gtr 0 (
     set /a RM+=FW
 )
 if !FW! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [12/15] Firewall: !FW! >> "!CLOG!"
+echo [!time:~0,8!] Verify [13/16] Firewall: !FW! >> "!CLOG!"
 
-REM === 13. IFEO DEBUGGER BLOCKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/15]!R! IFEO debugger blocks..."
+REM === 14. IFEO DEBUGGER BLOCKS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/16]!R! IFEO debugger blocks..."
 set IF=0
 set "IFEO_ROOT=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
 for %%x in (!IFEO_EXES!) do (
@@ -4714,10 +4973,10 @@ if !IF! gtr 0 (
     set /a RM+=IF
 )
 if !IF! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [13/15] IFEO: !IF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [14/16] IFEO: !IF! >> "!CLOG!"
 
-REM === 14. PENDING FILE RENAME OPERATIONS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/15]!R! PendingFileRename..."
+REM === 15. PENDING FILE RENAME OPERATIONS ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/16]!R! PendingFileRename..."
 set PF=0
 for /f "tokens=*" %%v in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v PendingFileRenameOperations 2^>nul ^| findstr /i "Autodesk"') do (
     set /a PF+=1
@@ -4738,10 +4997,10 @@ if !errorlevel! equ 0 (
     echo   REBOOT-FLAG: WindowsUpdate Orchestrator RebootRequired key exists >> "!VLOG!"
 )
 if !PF! gtr 0 set /a RM+=PF
-echo [!time:~0,8!] Verify [14/15] PFRO: !PF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [15/16] PFRO: !PF! >> "!CLOG!"
 
-REM === 15. HOSTS FILE ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/15]!R! Hosts file..."
+REM === 16. HOSTS FILE ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![16/16]!R! Hosts file..."
 set HF=0
 if exist "%WINDIR%\System32\drivers\etc\hosts" (
     for /f "tokens=*" %%h in ('findstr /i /v "^#" "%WINDIR%\System32\drivers\etc\hosts" 2^>nul ^| findstr /i "autodesk"') do (
@@ -4754,7 +5013,7 @@ if !HF! gtr 0 (
     set /a RM+=1
 )
 if !HF! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [15/15] Hosts: !HF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [16/16] Hosts: !HF! >> "!CLOG!"
 
 REM === SUMMARY ===
 echo.

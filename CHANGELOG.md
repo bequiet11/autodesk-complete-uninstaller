@@ -1,5 +1,28 @@
 # Changelog
 
+## [v5.9] - 2026-04-05
+
+### Added — Competitive Analysis Features
+- **MSI cleanup flags**: Added `REMOVE=ALL REBOOT=ReallySuppress` to all 6 `msiexec /x` calls for cleaner uninstallation
+- **Installer\Products ghost cleanup**: Detects and removes orphaned `HKLM\SOFTWARE\Classes\Installer\Products` entries in Phase H, Deep Clean, Scan [11/15], Audit [13/17], and Verify [10/16]
+- **System PATH cleanup**: Removes dead Autodesk/AdODIS entries from system PATH with automatic backup (PowerShell-based, handles all edge cases)
+- **Environment variable cleanup**: Detects and removes `ADSKFLEX_LICENSE_FILE`, `ADSK_LICENSE_FILE`, `AUTODESK_LICENSE_FILE`, `FLEXLM_TIMEOUT` from system and user environment (Phase H, Deep Clean, Scan, Audit, Verify)
+- **Multi-user cleanup**: Enumerates all user profiles via SID, loads offline NTUSER.DAT hives, cleans `Software\Autodesk` registry and AppData folders. Skips logged-in users (HKU hive check) and current user (USERPROFILE comparison)
+- **Public folder cleanup**: Added `C:\Users\Public\Autodesk` to Phase E, Deep Clean, and Verify folder lists
+- **Windows Temp cleanup**: Targeted removal of `C:\Windows\Temp\*Autodesk*` files and folders in Phase F and Deep Clean
+
+### Fixed
+- **PATH cleanup hang**: Replaced fragile CMD `for %%p in ("!SYSPATH:;=" "!")` string-splitting with PowerShell `[Environment]::GetEnvironmentVariable` — fixes infinite hang on machines with trailing backslashes in PATH entries
+- **PendingFileRenameOperations**: Option [11] now deletes PFRO entirely (consistent with Key Decision #4: clear ALL reboot state), instead of filtering Autodesk entries only
+- **wmic date fallback**: Backup date stamps now fall back to PowerShell `Get-Date` when wmic is unavailable (Windows 11 builds where wmic is removed)
+- **Multi-user safety**: Profile identification uses `%USERPROFILE%` comparison instead of folder name (handles domain accounts, renamed accounts). AppData loop checks HKU hive before deletion (protects logged-in users)
+- **Installer\Products backup**: Registry backup exported before deletion loop, not inside it (prevents overwrite when multiple products match)
+- **ProfileImagePath expansion**: Added `call set` to expand `REG_EXPAND_SZ` values containing `%SystemDrive%` in multi-user profile paths
+
+### Changed
+- **Option [11] reboot messaging**: "A system reboot is recommended but not required" — users can proceed without rebooting
+- **Removed winmgmt restart**: All `net stop/start winmgmt` calls removed (caused 4-minute hangs, msiserver flush is sufficient)
+
 ## v5.8 (2026-04-02)
 
 ### Added — Installation Readiness
