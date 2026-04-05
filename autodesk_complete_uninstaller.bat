@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v5.9
+title Autodesk Universal Uninstaller v5.11
 
 REM === ANSI Color Setup ===
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
@@ -58,7 +58,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v5.9 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v5.11 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -67,7 +67,7 @@ set "CLOG=!LOGDIR!\console_log.txt"
 type nul > "!CLOG!"
 echo ============================================================ >> "!CLOG!"
 echo  CONSOLE OUTPUT LOG >> "!CLOG!"
-echo  Autodesk Universal Uninstaller v5.9 >> "!CLOG!"
+echo  Autodesk Universal Uninstaller v5.11 >> "!CLOG!"
 echo  Date: %date% %time% >> "!CLOG!"
 echo  Computer: %COMPUTERNAME%  User: %USERNAME% >> "!CLOG!"
 echo ============================================================ >> "!CLOG!"
@@ -135,7 +135,7 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  !CCYN!============================================================!R!
-echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.9         !R!
+echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.11         !R!
 echo  !CCYN!  !DIM!  Supports all versions: 2015-2026+                  !R!
 echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11          !R!
 echo  !CCYN!============================================================!R!
@@ -250,8 +250,12 @@ echo  !CGRN!OK!R!
 REM Create the restore point using wmic
 echo  Creating restore point...
 <nul set /p "=  Method 1: WMIC..."
-wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Uninstall", 100, 12 >nul 2>&1
-if !errorlevel! equ 0 goto :cr_wmic_ok
+set "WMIC_RP_OK=0"
+for /f "tokens=*" %%w in ('wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Uninstall"^, 100^, 12 2^>nul') do (
+    echo "%%w" | findstr /i "ReturnValue = 0" >nul 2>&1
+    if !errorlevel! equ 0 set "WMIC_RP_OK=1"
+)
+if !WMIC_RP_OK! equ 1 goto :cr_wmic_ok
 
 REM Fallback to PowerShell if WMIC fails
 echo  failed.
@@ -269,6 +273,7 @@ echo  - Drive C: protection is off
 echo.
 echo  You can still continue with uninstallation.
 echo.
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
 pause
 goto :main_menu
 
@@ -276,6 +281,7 @@ goto :main_menu
 echo  SUCCESS
 echo  RESTORE POINT: Created >> "!LOGFILE!"
 echo [!time:~0,8!] Restore point: created >> "!CLOG!"
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
 echo.
 echo  Restore point created successfully.
 echo.
@@ -286,6 +292,7 @@ goto :main_menu
 echo  SUCCESS
 echo  RESTORE POINT: Created via PowerShell >> "!LOGFILE!"
 echo [!time:~0,8!] Restore point: created >> "!CLOG!"
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
 echo.
 echo  Restore point created successfully.
 echo.
@@ -571,7 +578,10 @@ for %%n in (!SEL!) do (
                     msiexec /x "{!GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress
                     set "UERR=!errorlevel!"
                     if !UERR! equ 0 echo  !CGRN!OK!R!
-                    if !UERR! neq 0 (
+                    if !UERR! equ 1605 echo  !CGRN!OK !DIM!^(already removed^)!R!
+                    if !UERR! equ 1641 echo  !CGRN!OK !DIM!^(reboot scheduled^)!R!
+                    if !UERR! equ 3010 echo  !CGRN!OK !DIM!^(reboot suggested^)!R!
+                    if !UERR! neq 0 if !UERR! neq 1605 if !UERR! neq 1641 if !UERR! neq 3010 (
                         echo  code:!UERR! retrying...
                         msiexec /x "{!GUID!}" /qb /norestart REMOVE=ALL REBOOT=ReallySuppress
                     )
@@ -646,6 +656,8 @@ if /i not "!FC_CONF!"=="YES" (
     pause
     goto :main_menu
 )
+echo.
+<nul set /p "=  Preparing..."
 
 REM Check for installer/download folders
 set "CLEAN_INSTALLERS=0"
@@ -682,18 +694,25 @@ if /i not "!RP_ASK!"=="Y" goto :fc_phase_b
 
 <nul set /p "=      Creating restore point..."
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
-wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Full Clean", 100, 12 >nul 2>&1
-if !errorlevel! equ 0 (
+set "WMIC_RP_OK=0"
+for /f "tokens=*" %%w in ('wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Full Clean"^, 100^, 12 2^>nul') do (
+    echo "%%w" | findstr /i "ReturnValue = 0" >nul 2>&1
+    if !errorlevel! equ 0 set "WMIC_RP_OK=1"
+)
+if !WMIC_RP_OK! equ 1 (
     echo  !CGRN!OK!R!
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
     goto :fc_phase_b
 )
 <nul set /p "= WMIC failed, trying PowerShell..."
 powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Full Clean' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
 if !errorlevel! equ 0 (
     echo  !CGRN!OK!R!
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
     goto :fc_phase_b
 )
 echo  FAILED - continuing anyway.
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
 
 :fc_phase_b
 echo.
@@ -739,19 +758,22 @@ if /i "!BACKUP_CHOICE!"=="Y" (
     <nul set /p "=  !DIM![!time:~0,8!]!R! Backing up Roaming\Autodesk..."
     if exist "%APPDATA%\Autodesk" (
         xcopy "%APPDATA%\Autodesk" "!BACKUP_DIR!\Roaming_Autodesk\" /e /h /q /y >nul 2>&1
-        echo  !CGRN!done.!R!
+        if !errorlevel! equ 0 echo  !CGRN!done.!R!
+        if !errorlevel! neq 0 echo  !CYLW!partial - some files could not be copied.!R!
     )
     if not exist "%APPDATA%\Autodesk" echo  !DIM!not found.!R!
     <nul set /p "=  !DIM![!time:~0,8!]!R! Backing up Local\Autodesk..."
     if exist "%LOCALAPPDATA%\Autodesk" (
         xcopy "%LOCALAPPDATA%\Autodesk" "!BACKUP_DIR!\Local_Autodesk\" /e /h /q /y >nul 2>&1
-        echo  !CGRN!done.!R!
+        if !errorlevel! equ 0 echo  !CGRN!done.!R!
+        if !errorlevel! neq 0 echo  !CYLW!partial - some files could not be copied.!R!
     )
     if not exist "%LOCALAPPDATA%\Autodesk" echo  !DIM!not found.!R!
     <nul set /p "=  !DIM![!time:~0,8!]!R! Backing up Public\Documents\Autodesk..."
     if exist "C:\Users\Public\Documents\Autodesk" (
         xcopy "C:\Users\Public\Documents\Autodesk" "!BACKUP_DIR!\Public_Autodesk\" /e /h /q /y >nul 2>&1
-        echo  !CGRN!done.!R!
+        if !errorlevel! equ 0 echo  !CGRN!done.!R!
+        if !errorlevel! neq 0 echo  !CYLW!partial - some files could not be copied.!R!
     )
     if not exist "C:\Users\Public\Documents\Autodesk" echo  !DIM!not found.!R!
     echo.
@@ -764,6 +786,7 @@ if /i "!BACKUP_CHOICE!" neq "Y" (
     echo.
 )
 
+echo.
 echo.
 echo  !DIM![!time:~0,8!]!R! !CCYN!Progress: !CGRN!==!R!!DIM!==================!R! !CWHT!Phase B - 1 of 12!R!
 REM --- Phase B: Stop everything ---
@@ -789,6 +812,7 @@ for %%p in (!KILL_PROCS!) do (
 REM Wildcard: kill ANY process running from Autodesk paths
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
 wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 echo  !CGRN!done.!R!
 echo [!time:~0,8!] Phase B: services stopped, processes killed >> "!CLOG!"
 timeout /t 2 >nul
@@ -905,6 +929,7 @@ for %%P in (1 3 4 5 6 7 8) do (
                         set "UERR=1"
                         if exist "!LOGDIR!\odis_done.tmp" (
                             set /p UERR=<"!LOGDIR!\odis_done.tmp"
+                            set "UERR=!UERR: =!"
                         )
                         del "!LOGDIR!\odis_done.tmp" >nul 2>&1
                         echo [!time:~0,8!] [!UNINST_CURRENT!/!PROD_COUNT!] !PNAME! - EXIT:!UERR! >> "!CLOG!"
@@ -956,8 +981,20 @@ for %%P in (1 3 4 5 6 7 8) do (
                                 echo  !CGRN!OK!R!
                                 set /a UNINST_OK+=1
                             )
-                            if !UERR! neq 0 (
-                                echo  !CRED!MSI:!UERR!!R!
+                            if !UERR! equ 1605 (
+                                echo  !CGRN!OK !DIM!^(already removed^)!R!
+                                set /a UNINST_OK+=1
+                            )
+                            if !UERR! equ 1641 (
+                                echo  !CGRN!OK !DIM!^(reboot scheduled^)!R!
+                                set /a UNINST_OK+=1
+                            )
+                            if !UERR! equ 3010 (
+                                echo  !CGRN!OK !DIM!^(reboot suggested^)!R!
+                                set /a UNINST_OK+=1
+                            )
+                            if !UERR! neq 0 if !UERR! neq 1605 if !UERR! neq 1641 if !UERR! neq 3010 (
+                                echo  !CRED!FAIL exit:!UERR!!R!
                                 set /a UNINST_FAIL+=1
                             )
                         )
@@ -998,7 +1035,19 @@ for %%P in (1 3 4 5 6 7 8) do (
                         echo  !CGRN!OK!R!
                         set /a UNINST_OK+=1
                     )
-                    if !UERR! neq 0 (
+                    if !UERR! equ 1605 (
+                        echo  !CGRN!OK !DIM!^(already removed^)!R!
+                        set /a UNINST_OK+=1
+                    )
+                    if !UERR! equ 1641 (
+                        echo  !CGRN!OK !DIM!^(reboot scheduled^)!R!
+                        set /a UNINST_OK+=1
+                    )
+                    if !UERR! equ 3010 (
+                        echo  !CGRN!OK !DIM!^(reboot suggested^)!R!
+                        set /a UNINST_OK+=1
+                    )
+                    if !UERR! neq 0 if !UERR! neq 1605 if !UERR! neq 1641 if !UERR! neq 3010 (
                         echo  !CRED!FAIL exit:!UERR!!R!
                         set /a UNINST_FAIL+=1
                     )
@@ -1009,6 +1058,10 @@ for %%P in (1 3 4 5 6 7 8) do (
 )
 echo.
 echo      !DIM!Pass 1 result:!R! !CGRN!!UNINST_OK! uninstalled!R!, !CRED!!UNINST_FAIL! failed!R!.
+if !UNINST_FAIL! gtr 0 (
+    echo      !DIM!Some failures are normal - components already removed by parent!R!
+    echo      !DIM!uninstallers. The tool will retry remaining products automatically.!R!
+)
 echo  PHASE C PASS 1: !UNINST_OK! ok !UNINST_FAIL! fail >> "!LOGFILE!"
 
 REM === MULTI-PASS RETRY: Rescan and retry up to 3 more times ===
@@ -1122,11 +1175,26 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVer
                             if defined R_GUID (
                                 <nul set /p "=..."
                                 msiexec /x "{!R_GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress >nul 2>&1
-                                if !errorlevel! equ 0 (
+                                set "RERR2=!errorlevel!"
+                                if !RERR2! equ 0 (
                                     echo  !CGRN!OK!R!
                                     set /a RETRY_OK+=1
                                 )
-                                if !errorlevel! neq 0 echo  MSI:!errorlevel!
+                                if !RERR2! equ 1605 (
+                                    echo  !CGRN!OK !DIM!^(already removed^)!R!
+                                    set /a RETRY_OK+=1
+                                )
+                                if !RERR2! equ 1641 (
+                                    echo  !CGRN!OK !DIM!^(reboot scheduled^)!R!
+                                    set /a RETRY_OK+=1
+                                )
+                                if !RERR2! equ 3010 (
+                                    echo  !CGRN!OK !DIM!^(reboot suggested^)!R!
+                                    set /a RETRY_OK+=1
+                                )
+                                if !RERR2! neq 0 if !RERR2! neq 1605 if !RERR2! neq 1641 if !RERR2! neq 3010 (
+                                    echo  !CRED!FAIL exit:!RERR2!!R!
+                                )
                             )
                             if not defined R_GUID echo  [no GUID]
                         )
@@ -1168,11 +1236,26 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Window
                         if defined R_GUID (
                             <nul set /p "=..."
                             msiexec /x "{!R_GUID!}" /qn /norestart REMOVE=ALL REBOOT=ReallySuppress >nul 2>&1
-                            if !errorlevel! equ 0 (
+                            set "RERR3=!errorlevel!"
+                            if !RERR3! equ 0 (
                                 echo  !CGRN!OK!R!
                                 set /a RETRY_OK+=1
                             )
-                            if !errorlevel! neq 0 echo  MSI:!errorlevel!
+                            if !RERR3! equ 1605 (
+                                echo  !CGRN!OK !DIM!^(already removed^)!R!
+                                set /a RETRY_OK+=1
+                            )
+                            if !RERR3! equ 1641 (
+                                echo  !CGRN!OK !DIM!^(reboot scheduled^)!R!
+                                set /a RETRY_OK+=1
+                            )
+                            if !RERR3! equ 3010 (
+                                echo  !CGRN!OK !DIM!^(reboot suggested^)!R!
+                                set /a RETRY_OK+=1
+                            )
+                            if !RERR3! neq 0 if !RERR3! neq 1605 if !RERR3! neq 1641 if !RERR3! neq 3010 (
+                                echo  !CRED!FAIL exit:!RERR3!!R!
+                            )
                         )
                     )
                     echo "!R_US!" | findstr /i "MsiExec" >nul 2>&1
@@ -1327,6 +1410,7 @@ for %%p in (!KILL_PROCS!) do (
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
 wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 REM Stop Windows Search to release index handles on Autodesk folders
 net stop msiserver >nul 2>&1
 net stop WSearch >nul 2>&1
@@ -1378,7 +1462,7 @@ for %%d in (
         if exist %%d (
             REM Try takeown + icacls then retry
             takeown /f %%d /r /d y >nul 2>&1
-            icacls %%d /grant Everyone:F /t /c /q >nul 2>&1
+            icacls %%d /grant *S-1-1-0:F /t /c /q >nul 2>&1
             rd /s /q %%d 2>nul
         )
         if not exist %%d (
@@ -1388,7 +1472,7 @@ for %%d in (
         if exist %%d (
             echo  !CRED!LOCKED.!R!
             set /a DFL+=1
-            set "LOCKED_LIST=!LOCKED_LIST! %%~d"
+            set "LOCKED_LIST=!LOCKED_LIST! "%%~d""
             echo   LOCKED: %%~d >> "!DIAGFILE!"
         )
     )
@@ -1399,7 +1483,7 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         rd /s /q "%%~d" 2>nul
         if exist "%%~d" (
             takeown /f "%%~d" /r /d y >nul 2>&1
-            icacls "%%~d" /grant Everyone:F /t /c /q >nul 2>&1
+            icacls "%%~d" /grant *S-1-1-0:F /t /c /q >nul 2>&1
             rd /s /q "%%~d" 2>nul
         )
         if not exist "%%~d" (
@@ -1409,7 +1493,7 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         if exist "%%~d" (
             echo  !CRED!LOCKED.!R!
             set /a DFL+=1
-            set "LOCKED_LIST=!LOCKED_LIST! %%~d"
+            set "LOCKED_LIST=!LOCKED_LIST! "%%~d""
             echo   LOCKED: %%~d >> "!DIAGFILE!"
         )
     )
@@ -1510,7 +1594,7 @@ REM Desktop shortcuts - current user and public
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya Navisworks DWG Alias Moldflow Fusion Advance Steel Design Review 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"Civil 3D" /c:"Maya" /c:"Navisworks" /c:"DWG" /c:"Alias" /c:"Moldflow" /c:"Fusion" /c:"Advance Steel" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 del /f "%%f" >nul 2>&1
                 set /a SC_DEL+=1
@@ -1537,7 +1621,7 @@ for %%M in (
 ) do (
     if exist "%%~M" (
         for %%f in ("%%~M\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"DWG" /c:"Design Review" >nul 2>&1
             if !errorlevel! equ 0 (
                 del /f "%%f" >nul 2>&1
                 set /a SC_DEL+=1
@@ -1549,7 +1633,7 @@ REM Taskbar pins
 for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar") do (
     if exist "%%~T" (
         for %%f in ("%%~T\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor Maya Navisworks DWG Alias Design Review 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"Maya" /c:"Navisworks" /c:"DWG" /c:"Alias" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 del /f "%%f" >nul 2>&1
                 set /a SC_DEL+=1
@@ -1644,10 +1728,8 @@ for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findst
 echo  !TASK_DEL! removed.
 <nul set /p "=      Firewall rules"
 set FW_DEL=0
-for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
-    set "RN=%%r"
-    set "RN=!RN:~1!"
-    netsh advfirewall firewall delete rule name="!RN!" >nul 2>&1
+for /f "delims=" %%r in ('powershell -NoProfile -Command "(Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Autodesk|AutoCAD|Revit|Inventor|Civil|Maya|3ds.?Max|Navisworks' }).DisplayName" 2^>nul') do (
+    netsh advfirewall firewall delete rule name="%%r" >nul 2>&1
     set /a FW_DEL+=1
     <nul set /p "=."
 )
@@ -1752,10 +1834,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /f "Auto
     set /a CDEL+=1
 )
 REM Clean MuiCache Autodesk entries
-for /f "tokens=1,*" %%a in ('reg query "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" 2^>nul ^| findstr /i "Autodesk"') do (
-    reg delete "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%%a" /f >nul 2>&1
-    set /a CDEL+=1
-)
+for /f "tokens=*" %%c in ('powershell -NoProfile -Command "$p='HKCU:\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache'; $count=0; (Get-ItemProperty $p -ErrorAction SilentlyContinue).PSObject.Properties | Where-Object { $_.Name -match 'Autodesk' -or $_.Value -match 'Autodesk' } | ForEach-Object { Remove-ItemProperty $p -Name $_.Name -Force -ErrorAction SilentlyContinue; $count++ }; Write-Output $count" 2^>nul') do set /a CDEL+=%%c
 REM Clean shell extensions from HKLM
 for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s 2^>nul ^| findstr /i "Autodesk"') do (
     reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /v "%%a" /f >nul 2>&1
@@ -1847,7 +1926,7 @@ if !PFRO_FOUND! equ 1 (
     REM is to delete the entire value if it only contains Autodesk entries,
     REM or warn the user if it contains mixed entries
     REM For safety, just delete if present - Windows will recreate if needed
-    powershell -Command "$val = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations; if ($val) { $clean = $val | Where-Object { $_ -notmatch 'Autodesk|AdODIS|AdskLicensing|adsk' }; if ($clean.Count -eq 0) { Remove-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -Force -ErrorAction SilentlyContinue } else { Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -Value $clean -ErrorAction SilentlyContinue } }" >nul 2>&1
+    powershell -NoProfile -Command "$rp='HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'; $v=(Get-ItemProperty $rp -Name PendingFileRenameOperations -EA SilentlyContinue).PendingFileRenameOperations; if($v){ $c=@(); $rm=0; for($i=0; $i -lt $v.Count; $i+=2){ $s=$v[$i]; $d=if($i+1 -lt $v.Count){$v[$i+1]}else{''}; if($s -match 'Autodesk|AdODIS|AdskLicensing|adsk' -or $d -match 'Autodesk|AdODIS|AdskLicensing|adsk'){ $rm++ }else{ $c+=$s; $c+=$d } }; if($rm -gt 0){ if($c.Count -eq 0){ Remove-ItemProperty $rp -Name PendingFileRenameOperations -Force -EA SilentlyContinue }else{ Set-ItemProperty $rp -Name PendingFileRenameOperations -Value ([string[]]$c) -Type MultiString -EA SilentlyContinue } } }" >nul 2>&1
     echo      PendingFileRenameOperations cleaned.
     echo  PFRO: Autodesk entries cleaned >> "!LOGFILE!"
 )
@@ -1887,6 +1966,7 @@ if defined LOCKED_LIST (
     )
     wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
     wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+    powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
     net stop WSearch >nul 2>&1
     net stop msiserver >nul 2>&1
     REM Kill explorer to release shell extension handles on backup files
@@ -1897,28 +1977,28 @@ if defined LOCKED_LIST (
     timeout /t 2 >nul
     REM Delete files first, then remove empty dirs
     for %%d in (!LOCKED_LIST!) do (
-        if exist "%%d" (
-            del /f /s /q "%%d\*" >nul 2>&1
-            for /f "delims=" %%x in ('dir /s /b /ad "%%d" 2^>nul ^| sort /r') do rd "%%x" 2>nul
+        if exist "%%~d" (
+            del /f /s /q "%%~d\*" >nul 2>&1
+            for /f "delims=" %%x in ('dir /s /b /ad "%%~d" 2^>nul ^| sort /r') do rd "%%x" 2>nul
         )
     )
     for %%d in (!LOCKED_LIST!) do (
-        if exist "%%d" (
+        if exist "%%~d" (
             <nul set /p "=      %%~d..."
-            rd /s /q "%%d" 2>nul
-            if exist "%%d" (
-                takeown /f "%%d" /r /d y >nul 2>&1
-                icacls "%%d" /grant Everyone:F /t /c /q >nul 2>&1
-                rd /s /q "%%d" 2>nul
+            rd /s /q "%%~d" 2>nul
+            if exist "%%~d" (
+                takeown /f "%%~d" /r /d y >nul 2>&1
+                icacls "%%~d" /grant *S-1-1-0:F /t /c /q >nul 2>&1
+                rd /s /q "%%~d" 2>nul
             )
-            if not exist "%%d" (
+            if not exist "%%~d" (
                 echo  !CGRN!deleted.!R!
             )
-            if exist "%%d" (
+            if exist "%%~d" (
                 echo  !CRED!still locked - will clean on reboot.!R!
             )
         )
-        if not exist "%%d" (
+        if not exist "%%~d" (
             echo      %%~d... !CGRN!already gone.!R!
         )
     )
@@ -1928,7 +2008,7 @@ REM Generate reboot cleanup only if folders still locked after retry
 set "STILL_LOCKED=0"
 if defined LOCKED_LIST (
     for %%d in (!LOCKED_LIST!) do (
-        if exist "%%d" set "STILL_LOCKED=1"
+        if exist "%%~d" set "STILL_LOCKED=1"
     )
 )
 if !STILL_LOCKED! equ 1 (
@@ -1936,7 +2016,7 @@ if !STILL_LOCKED! equ 1 (
     echo @echo off > "!REBOOT_BAT!"
     echo timeout /t 10 /nobreak ^>nul >> "!REBOOT_BAT!"
     for %%d in (!LOCKED_LIST!) do (
-        if exist "%%d" echo if exist "%%d" rd /s /q "%%d" >> "!REBOOT_BAT!"
+        if exist "%%~d" echo if exist "%%~d" rd /s /q "%%~d" >> "!REBOOT_BAT!"
     )
     echo del /f "!REBOOT_BAT!" >> "!REBOOT_BAT!"
     reg add "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\RunOnce" /v "AutodeskCleanup" /t REG_SZ /d "\"!REBOOT_BAT!\"" /f >nul 2>&1
@@ -2017,17 +2097,24 @@ if /i not "!DC_RP!"=="Y" goto :dc_after_rp
 
 <nul set /p "=  Creating restore point..."
 reg add "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /t REG_DWORD /d 0 /f >nul 2>&1
-wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Deep Clean", 100, 12 >nul 2>&1
-if !errorlevel! equ 0 (
+set "WMIC_RP_OK=0"
+for /f "tokens=*" %%w in ('wmic.exe /Namespace:\\root\default Path SystemRestore Call CreateRestorePoint "Pre-Autodesk Deep Clean"^, 100^, 12 2^>nul') do (
+    echo "%%w" | findstr /i "ReturnValue = 0" >nul 2>&1
+    if !errorlevel! equ 0 set "WMIC_RP_OK=1"
+)
+if !WMIC_RP_OK! equ 1 (
     echo  !CGRN!OK!R!
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
     goto :dc_after_rp
 )
 powershell -ExecutionPolicy Bypass -Command "Checkpoint-Computer -Description 'Pre-Autodesk Deep Clean' -RestorePointType 'MODIFY_SETTINGS'" >nul 2>&1
 if !errorlevel! equ 0 (
     echo  OK via PowerShell
+    reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
     goto :dc_after_rp
 )
 echo  FAILED - continuing.
+reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
 
 :dc_after_rp
 
@@ -2051,6 +2138,7 @@ for %%p in (!KILL_PROCS!) do (
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
 wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 net stop WSearch >nul 2>&1
 echo  !CGRN!done.!R!
 timeout /t 2 >nul
@@ -2133,6 +2221,7 @@ for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe I
     taskkill /f /im "%%p" >nul 2>&1
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 net stop msiserver >nul 2>&1
 net stop WSearch >nul 2>&1
 REM Unregister shell extensions loaded by explorer.exe
@@ -2178,13 +2267,13 @@ for %%d in (
         rd /s /q %%d 2>nul
         if exist %%d (
             takeown /f %%d /r /d y >nul 2>&1
-            icacls %%d /grant Everyone:F /t /c /q >nul 2>&1
+            icacls %%d /grant *S-1-1-0:F /t /c /q >nul 2>&1
             rd /s /q %%d 2>nul
         )
         if not exist %%d echo  !CGRN!deleted.!R!
         if exist %%d (
             echo  !CRED!LOCKED.!R!
-            set "DC_LOCKED=!DC_LOCKED! %%~d"
+            set "DC_LOCKED=!DC_LOCKED! "%%~d""
         )
     )
 )
@@ -2194,13 +2283,13 @@ for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Progr
         rd /s /q "%%~d" 2>nul
         if exist "%%~d" (
             takeown /f "%%~d" /r /d y >nul 2>&1
-            icacls "%%~d" /grant Everyone:F /t /c /q >nul 2>&1
+            icacls "%%~d" /grant *S-1-1-0:F /t /c /q >nul 2>&1
             rd /s /q "%%~d" 2>nul
         )
         if not exist "%%~d" echo  !CGRN!deleted.!R!
         if exist "%%~d" (
             echo  !CRED!LOCKED.!R!
-            set "DC_LOCKED=!DC_LOCKED! %%~d"
+            set "DC_LOCKED=!DC_LOCKED! "%%~d""
         )
     )
 )
@@ -2270,7 +2359,7 @@ set DC_SC=0
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya Navisworks DWG Alias Moldflow Fusion Advance Steel Design Review 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"Civil 3D" /c:"Maya" /c:"Navisworks" /c:"DWG" /c:"Alias" /c:"Moldflow" /c:"Fusion" /c:"Advance Steel" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 del /f "%%f" >nul 2>&1
                 set /a DC_SC+=1
@@ -2293,7 +2382,7 @@ for %%M in (
 ) do (
     if exist "%%~M" (
         for %%f in ("%%~M\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"DWG" /c:"Design Review" >nul 2>&1
             if !errorlevel! equ 0 (
                 del /f "%%f" >nul 2>&1
                 set /a DC_SC+=1
@@ -2304,7 +2393,7 @@ for %%M in (
 for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar") do (
     if exist "%%~T" (
         for %%f in ("%%~T\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor Maya Navisworks DWG Alias Design Review 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"Maya" /c:"Navisworks" /c:"DWG" /c:"Alias" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 del /f "%%f" >nul 2>&1
                 set /a DC_SC+=1
@@ -2334,10 +2423,8 @@ for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findst
     schtasks /delete /tn "%%~n" /f >nul 2>&1
     <nul set /p "=."
 )
-for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
-    set "RN=%%r"
-    set "RN=!RN:~1!"
-    netsh advfirewall firewall delete rule name="!RN!" >nul 2>&1
+for /f "delims=" %%r in ('powershell -NoProfile -Command "(Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Autodesk|AutoCAD|Revit|Inventor|Civil|Maya|3ds.?Max|Navisworks' }).DisplayName" 2^>nul') do (
+    netsh advfirewall firewall delete rule name="%%r" >nul 2>&1
     <nul set /p "=."
 )
 echo  !CGRN!done.!R!
@@ -2430,10 +2517,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\TypeLib" /s /f "Auto
     reg delete "%%k" /f >nul 2>&1
     set /a DC_CDEL+=1
 )
-for /f "tokens=1,*" %%a in ('reg query "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" 2^>nul ^| findstr /i "Autodesk"') do (
-    reg delete "HKCU\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache" /v "%%a" /f >nul 2>&1
-    set /a DC_CDEL+=1
-)
+for /f "tokens=*" %%c in ('powershell -NoProfile -Command "$p='HKCU:\SOFTWARE\Classes\Local Settings\Software\Microsoft\Windows\Shell\MuiCache'; $count=0; (Get-ItemProperty $p -ErrorAction SilentlyContinue).PSObject.Properties | Where-Object { $_.Name -match 'Autodesk' -or $_.Value -match 'Autodesk' } | ForEach-Object { Remove-ItemProperty $p -Name $_.Name -Force -ErrorAction SilentlyContinue; $count++ }; Write-Output $count" 2^>nul') do set /a DC_CDEL+=%%c
 for /f "tokens=1,*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /s 2^>nul ^| findstr /i "Autodesk"') do (
     reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Shell Extensions\Approved" /v "%%a" /f >nul 2>&1
     set /a DC_CDEL+=1
@@ -2508,7 +2592,7 @@ for /f "tokens=*" %%v in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Sess
 )
 if !DC_PFRO! equ 1 (
     echo  cleaning...
-    powershell -Command "$val = (Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -ErrorAction SilentlyContinue).PendingFileRenameOperations; if ($val) { $clean = $val | Where-Object { $_ -notmatch 'Autodesk|AdODIS|AdskLicensing|adsk' }; if ($clean.Count -eq 0) { Remove-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -Force -ErrorAction SilentlyContinue } else { Set-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager' -Name PendingFileRenameOperations -Value $clean -ErrorAction SilentlyContinue } }" >nul 2>&1
+    powershell -NoProfile -Command "$rp='HKLM:\SYSTEM\CurrentControlSet\Control\Session Manager'; $v=(Get-ItemProperty $rp -Name PendingFileRenameOperations -EA SilentlyContinue).PendingFileRenameOperations; if($v){ $c=@(); $rm=0; for($i=0; $i -lt $v.Count; $i+=2){ $s=$v[$i]; $d=if($i+1 -lt $v.Count){$v[$i+1]}else{''}; if($s -match 'Autodesk|AdODIS|AdskLicensing|adsk' -or $d -match 'Autodesk|AdODIS|AdskLicensing|adsk'){ $rm++ }else{ $c+=$s; $c+=$d } }; if($rm -gt 0){ if($c.Count -eq 0){ Remove-ItemProperty $rp -Name PendingFileRenameOperations -Force -EA SilentlyContinue }else{ Set-ItemProperty $rp -Name PendingFileRenameOperations -Value ([string[]]$c) -Type MultiString -EA SilentlyContinue } } }" >nul 2>&1
     echo    PendingFileRenameOperations cleaned.
 )
 if !DC_PFRO! equ 0 echo  clean.
@@ -2531,6 +2615,7 @@ if defined DC_LOCKED (
         taskkill /f /im "%%p" >nul 2>&1
     )
     wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
+    powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
     net stop WSearch >nul 2>&1
     net stop msiserver >nul 2>&1
     REM Kill explorer to release shell extension handles on backup files
@@ -2541,22 +2626,22 @@ if defined DC_LOCKED (
     timeout /t 2 >nul
     REM Delete files first, then remove empty dirs
     for %%d in (!DC_LOCKED!) do (
-        if exist "%%d" (
-            del /f /s /q "%%d\*" >nul 2>&1
-            for /f "delims=" %%x in ('dir /s /b /ad "%%d" 2^>nul ^| sort /r') do rd "%%x" 2>nul
+        if exist "%%~d" (
+            del /f /s /q "%%~d\*" >nul 2>&1
+            for /f "delims=" %%x in ('dir /s /b /ad "%%~d" 2^>nul ^| sort /r') do rd "%%x" 2>nul
         )
     )
     for %%d in (!DC_LOCKED!) do (
-        if exist "%%d" (
+        if exist "%%~d" (
             <nul set /p "=    %%~d..."
-            rd /s /q "%%d" 2>nul
-            if exist "%%d" (
-                takeown /f "%%d" /r /d y >nul 2>&1
-                icacls "%%d" /grant Everyone:F /t /c /q >nul 2>&1
-                rd /s /q "%%d" 2>nul
+            rd /s /q "%%~d" 2>nul
+            if exist "%%~d" (
+                takeown /f "%%~d" /r /d y >nul 2>&1
+                icacls "%%~d" /grant *S-1-1-0:F /t /c /q >nul 2>&1
+                rd /s /q "%%~d" 2>nul
             )
-            if not exist "%%d" echo  !CGRN!deleted.!R!
-            if exist "%%d" echo  !CRED!still locked.!R!
+            if not exist "%%~d" echo  !CGRN!deleted.!R!
+            if exist "%%~d" echo  !CRED!still locked.!R!
         )
     )
 )
@@ -2806,7 +2891,7 @@ REM === 6. FULL C: DRIVE SEARCH ===
 set RS_CDRIVE=0
 echo --- AUTODESK FOLDERS ANYWHERE ON C: --- >> "!SCANFILE!"
 echo  Searching C: drive for Autodesk folders... >> "!SCANFILE!"
-dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i "Desktop\\Autodesk_Uninstaller\|Downloads\\autodesk" > "!LOGDIR!\remnant_cdrive_tmp.txt"
+dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i /c:"Desktop\Autodesk_Uninstaller" /c:"\Downloads\Autodesk" /c:"\Downloads\AutoCAD" /c:"\Downloads\Revit" /c:"\Downloads\Maya" /c:"\Downloads\3ds" /c:"\Downloads\Inventor" /c:"\Downloads\Civil" /c:"\Downloads\Navisworks" /c:"\Downloads\DWG" > "!LOGDIR!\remnant_cdrive_tmp.txt"
 for /f "tokens=*" %%L in ('type "!LOGDIR!\remnant_cdrive_tmp.txt" 2^>nul') do (
     set /a RS_CDRIVE+=1
     <nul set /p "=!ESC![50G!DIM!scanning: !RS_CDRIVE!  !R!"
@@ -2999,7 +3084,7 @@ echo --- DESKTOP SHORTCUTS --- >> "!SCANFILE!"
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max Maya Navisworks" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"DWG" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" /c:"Maya" /c:"Navisworks" >nul 2>&1
             if !errorlevel! equ 0 (
                 set /a RS_OTHER+=1
                 echo  SHORTCUT: %%f >> "!SCANFILE!"
@@ -3377,13 +3462,13 @@ echo ------------------------------------------------------------ >> "!AUDITFILE
 echo  5a. Product remnants: >> "!AUDITFILE!"
 for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /v /i "Desktop\\Autodesk_Uninstaller"') do (
     set "AU_IS_INSTALLER=0"
-    echo "%%p" | findstr /i "\\Downloads\\" >nul 2>&1
+    echo "%%p" | findstr /i /c:"\Downloads\" >nul 2>&1
     if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
-    echo "%%p" | findstr /i "\\Google\\Chrome\\" >nul 2>&1
+    echo "%%p" | findstr /i /c:"\Google\Chrome\" >nul 2>&1
     if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
-    echo "%%p" | findstr /i "\\Edge\\User Data\\" >nul 2>&1
+    echo "%%p" | findstr /i /c:"\Edge\User Data\" >nul 2>&1
     if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
-    echo "%%p" | findstr /i "\\Firefox\\Profiles\\" >nul 2>&1
+    echo "%%p" | findstr /i /c:"\Firefox\Profiles\" >nul 2>&1
     if !errorlevel! equ 0 set "AU_IS_INSTALLER=1"
     if !AU_IS_INSTALLER! equ 0 (
         set /a AU_OTHER+=1
@@ -3400,7 +3485,7 @@ REM --- 5b. Installer files (for/f with pipe must be outside if blocks) ---
 set "AU_WROTE_5B=0"
 set "AU_SKIP_5B=0"
 if !AU_INSTALLER! equ 0 set "AU_SKIP_5B=1"
-for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /i "\\Downloads\\ \\Google\\Chrome\\ \\Edge\\User Data\\ \\Firefox\\Profiles\\"') do (
+for /f "tokens=*" %%p in ('dir /s /b /ad "C:\*Autodesk*" 2^>nul ^| findstr /i /c:"\Downloads\" /c:"\Google\Chrome\" /c:"\Edge\User Data\" /c:"\Firefox\Profiles\"') do (
     if !AU_SKIP_5B! equ 0 (
         if !AU_WROTE_5B! equ 0 echo  5b. Installation files and browser cache [OPTIONAL]: >> "!AUDITFILE!"
         set "AU_WROTE_5B=1"
@@ -3575,7 +3660,7 @@ set AU_FW=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  10. FIREWALL RULES >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
+for /f "delims=" %%r in ('powershell -NoProfile -Command "(Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Autodesk|AutoCAD|Revit|Inventor|Civil|Maya|3ds.?Max|Navisworks' }).DisplayName" 2^>nul') do (
     set /a AU_FW+=1
     echo   %%r >> "!AUDITFILE!"
 )
@@ -3599,7 +3684,7 @@ echo ------------------------------------------------------------ >> "!AUDITFILE
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max Maya Navisworks" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"DWG" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" /c:"Maya" /c:"Navisworks" >nul 2>&1
             if !errorlevel! equ 0 (
                 set /a AU_SC+=1
                 echo   Desktop: %%~nf >> "!AUDITFILE!"
@@ -3618,7 +3703,7 @@ if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
 for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar") do (
     if exist "%%~T" (
         for %%f in ("%%~T\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"DWG" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 set /a AU_SC+=1
                 echo   Taskbar: %%~nf >> "!AUDITFILE!"
@@ -4300,10 +4385,16 @@ if !E103_HOSTS! gtr 0 if /i "!E103_R10!"=="Y" (
         set "HSKIP=0"
         echo "%%h" | findstr /i "autodesk" >nul 2>&1
         if !errorlevel! equ 0 (
-            echo "%%h" | findstr /b /c:"#" >nul 2>&1
-            if !errorlevel! neq 0 set "HSKIP=1"
+            set "HIS_COMMENT=0"
+            echo "!HLINE!" | findstr /b /c:"#" >nul 2>&1
+            if !errorlevel! equ 0 set "HIS_COMMENT=1"
+            for /f "tokens=*" %%t in ("!HLINE!") do (
+                echo "%%t" | findstr /b /c:"#" >nul 2>&1
+                if !errorlevel! equ 0 set "HIS_COMMENT=1"
+            )
+            if !HIS_COMMENT! equ 0 set "HSKIP=1"
         )
-        if !HSKIP! equ 0 echo %%h>> "!HOSTS_TMP!"
+        if !HSKIP! equ 0 >>"!HOSTS_TMP!" echo(%%h
     )
     copy /y "!HOSTS_TMP!" "!HOSTS_FILE!" >nul 2>&1
     del "!HOSTS_TMP!" >nul 2>&1
@@ -4564,17 +4655,20 @@ mkdir "!BK_DIR!" >nul 2>&1
 if exist "%APPDATA%\Autodesk" (
     <nul set /p "=  !DIM![!time:~0,8!]!R! Backing up Roaming\Autodesk..."
     xcopy "%APPDATA%\Autodesk" "!BK_DIR!\Roaming_Autodesk\" /e /h /q /y >nul 2>&1
-    echo  !CGRN!done.!R!
+    if !errorlevel! equ 0 echo  !CGRN!done.!R!
+    if !errorlevel! neq 0 echo  !CYLW!partial - some files could not be copied.!R!
 )
 if exist "%LOCALAPPDATA%\Autodesk" (
     <nul set /p "=  !DIM![!time:~0,8!]!R! Backing up Local\Autodesk..."
     xcopy "%LOCALAPPDATA%\Autodesk" "!BK_DIR!\Local_Autodesk\" /e /h /q /y >nul 2>&1
-    echo  !CGRN!done.!R!
+    if !errorlevel! equ 0 echo  !CGRN!done.!R!
+    if !errorlevel! neq 0 echo  !CYLW!partial - some files could not be copied.!R!
 )
 if exist "C:\Users\Public\Documents\Autodesk" (
     <nul set /p "=  !DIM![!time:~0,8!]!R! Backing up Public\Documents\Autodesk..."
     xcopy "C:\Users\Public\Documents\Autodesk" "!BK_DIR!\Public_Autodesk\" /e /h /q /y >nul 2>&1
-    echo  !CGRN!done.!R!
+    if !errorlevel! equ 0 echo  !CGRN!done.!R!
+    if !errorlevel! neq 0 echo  !CYLW!partial - some files could not be copied.!R!
 )
 
 REM Calculate backup size
@@ -4895,7 +4989,7 @@ set SV=0
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
         for %%f in ("%%~L\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya Navisworks DWG Design Review 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"Civil 3D" /c:"Maya" /c:"Navisworks" /c:"DWG" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 set /a SV+=1
                 echo   SHORTCUT: %%f >> "!VLOG!"
@@ -4914,7 +5008,7 @@ if exist "%ProgramData%\Microsoft\Windows\Start Menu\Programs\Autodesk" (
 for %%T in ("%APPDATA%\Microsoft\Internet Explorer\Quick Launch\User Pinned\TaskBar") do (
     if exist "%%~T" (
         for %%f in ("%%~T\*.lnk") do (
-            echo "%%~nf" | findstr /i "Autodesk AutoCAD Revit Inventor DWG Design Review 3ds Max" >nul 2>&1
+            echo "%%~nf" | findstr /i /c:"Autodesk" /c:"AutoCAD" /c:"Revit" /c:"Inventor" /c:"DWG" /c:"Design Review" /c:"3ds Max" /c:"3dsMax" >nul 2>&1
             if !errorlevel! equ 0 (
                 set /a SV+=1
                 echo   TASKBAR: %%f >> "!VLOG!"
@@ -4946,7 +5040,7 @@ echo [!time:~0,8!] Verify [12/16] Tasks: !TK! >> "!CLOG!"
 REM === 13. FIREWALL RULES ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/16]!R! Firewall rules..."
 set FW=0
-for /f "tokens=2 delims=:" %%r in ('netsh advfirewall firewall show rule name^=all 2^>nul ^| findstr /i "Rule Name:" ^| findstr /i "Autodesk AutoCAD Revit Inventor Civil Maya 3dsMax Navisworks"') do (
+for /f "delims=" %%r in ('powershell -NoProfile -Command "(Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Autodesk|AutoCAD|Revit|Inventor|Civil|Maya|3ds.?Max|Navisworks' }).DisplayName" 2^>nul') do (
     set /a FW+=1
     echo   FIREWALL: %%r >> "!VLOG!"
 )

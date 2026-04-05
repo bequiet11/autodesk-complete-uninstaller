@@ -1,5 +1,28 @@
 # Changelog
 
+## [v5.11] - 2026-04-05
+
+### Added — UX, Safety, and Localization
+- **MSI exit code intelligence**: Exit 1605 shows green "OK (already removed)", exits 1641/3010 show green "OK (reboot scheduled/suggested)" instead of red FAIL. Pass 1 summary includes reassurance message for users
+- **ODIS exit display fix**: Fixed false "FAIL exit:0" display caused by trailing space in done-file — ODIS successes now correctly show green OK
+- **Localized ACLs**: All `icacls Everyone:F` replaced with `*S-1-1-0:F` — works on non-English Windows (Spanish, French, German, etc.)
+- **Firewall rule localization**: Replaced locale-dependent `netsh` + `findstr "Rule Name:"` with PowerShell `Get-NetFirewallRule` — works on all Windows languages
+- **MuiCache PowerShell cleanup**: Replaced fragile `for /f "tokens=1,*"` registry parsing (truncated paths with spaces) with PowerShell `Get-ItemProperty` enumeration
+- **wmic process kill fallback**: Added PowerShell `Get-Process | Stop-Process` fallback after every `wmic process where` call — ensures process termination on Windows 11 24H2+ where wmic is removed
+- **PFRO pair-aware filtering**: PendingFileRenameOperations cleanup in Phase H and Deep Clean now iterates in Source/Target pairs (`$i+=2`), preventing array misalignment that could corrupt Windows Update pending renames
+- **Restore point frequency cleanup**: `SystemRestorePointCreationFrequency` registry override is now deleted after restore point creation (success or failure), restoring Windows' default 24-hour policy
+- **wmic restore point validation**: Checks `ReturnValue = 0` in wmic output instead of relying on errorlevel (which always returns 0 even on WMI-layer failures)
+- **Backup error reporting**: xcopy operations in Option [12] and Full Clean backup now check errorlevel — partial copies show yellow warning instead of false green "done"
+- **Preparing indicator**: Shows "Preparing..." after YES confirmation to bridge the gap before Phase B starts
+
+### Fixed
+- **findstr space delimiter** (CRITICAL): All multi-word product name patterns converted to `/c:"exact phrase"` syntax — prevents deletion of unrelated shortcuts (e.g., "Max Payne", "SteelSeries", "HBO Max") that matched individual words
+- **Locked folder path quoting**: Paths with spaces appended to `LOCKED_LIST`/`DC_LOCKED` are now quoted, preventing `rd /s /q "C:\Program"` on split tokens
+- **Hosts file echo redirect**: Moved redirection to front of line (`>>"file" echo(%%h`) — prevents `1>>` stream redirection consuming trailing digits from IP addresses
+- **Hosts file indented comments**: Comment detection now handles leading whitespace (`    # comment`) via `for /f "tokens=*"` trimming, not just column-1 `#`
+- **Remnant scan browser exclusions**: Audit browser/installer path classification uses `/c:"\Edge\User Data\"` instead of space-separated `\Edge\User Data\` (which matched `\Edge\User` OR `Data\` independently)
+- **Remnant scan Downloads filter**: Exclusion now targets specific product names (`\Downloads\Autodesk`, `\Downloads\AutoCAD`, etc.) instead of broadly excluding any path containing "Downloads"
+
 ## [v5.9] - 2026-04-05
 
 ### Added — Competitive Analysis Features
