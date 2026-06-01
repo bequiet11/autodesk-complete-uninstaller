@@ -41,14 +41,20 @@ set "KILL_PROCS_SCAN=AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr Auto
 REM IFEO executables to check for debugger blocks (used by Error 103, Phase H3, Deep Clean, verify)
 set "IFEO_EXES=ProcessManager.exe DownloadManager.exe InstallManager.exe install_manager.exe install_helper_tool.exe AdODIS-installer.exe GenuineService.exe AdskIdentityManager.exe Installer.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe AdSSO.exe AdskLicensingService.exe LogAnalyzer.exe"
 
+REM === ADMIN CHECK + SELF-ELEVATION ===
+REM If not elevated, relaunch via UAC. The elevated copy re-runs from the
+REM top, passes this check, and continues. If the user declines UAC, the
+REM relaunch fails silently and this (non-elevated) instance has already
+REM exited - no loop.
 net session >nul 2>&1
 if %errorlevel% neq 0 (
     echo.
-    echo  !CRED!ERROR: This script must be run as Administrator.!R!
-    echo  Right-click and select "Run as administrator".
+    echo  !CCYN!Requesting administrator privileges...!R!
+    echo  !DIM!Please approve the User Account Control ^(UAC^) prompt.!R!
+    echo  !DIM!If you decline, the tool cannot run.!R!
     echo.
-    pause
-    exit /b 1
+    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs" >nul 2>&1
+    exit /b
 )
 
 set "LOGDIR=%USERPROFILE%\Desktop\Autodesk_Uninstaller"
@@ -1385,7 +1391,11 @@ if exist "C:\ProgramData\Autodesk\Uninstallers" (
     <nul set /p "=      AdskUninstallHelpers"
     for /d %%h in ("C:\ProgramData\Autodesk\Uninstallers\*") do (
         if exist "%%h\AdskUninstallHelper.exe" (
-            start /wait "" "%%h\AdskUninstallHelper.exe" >nul 2>&1
+            REM Run silently with -q. Without it the helper opens an interactive
+            REM GUI wizard and blocks forever. The 5-min per-helper timeout is a
+            REM safety net for an ODIS/BITS deadlock so one helper cannot hang
+            REM the whole script.
+            powershell -NoProfile -Command "try { $p = Start-Process -FilePath '%%h\AdskUninstallHelper.exe' -ArgumentList '-q' -WindowStyle Hidden -PassThru; if (-not $p.WaitForExit(300000)) { $p.Kill() } } catch {}" >nul 2>&1
             <nul set /p "=."
         )
     )
@@ -2167,15 +2177,13 @@ if exist "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\unin
     start /wait "" "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" --mode unattended
     echo  !CGRN!OK!R!
 )
+REM Deep Clean is remnant-only ("no product uninstall"), so we do NOT execute
+REM AdskUninstallHelper.exe here. Running it performs a full, sometimes
+REM interactive, product uninstall (it would hang on its GUI wizard and is out
+REM of scope for this option). The C:\ProgramData\Autodesk\Uninstallers folder
+REM is removed later as a remnant during folder deletion.
 if exist "C:\ProgramData\Autodesk\Uninstallers" (
-    <nul set /p "=    AdskUninstallHelpers"
-    for /d %%h in ("C:\ProgramData\Autodesk\Uninstallers\*") do (
-        if exist "%%h\AdskUninstallHelper.exe" (
-            start /wait "" "%%h\AdskUninstallHelper.exe" >nul 2>&1
-            <nul set /p "=."
-        )
-    )
-    echo  !CGRN!done.!R!
+    echo      AdskUninstallHelpers... !DIM!^(removed with remnant folders^)!R!
 )
 del /f "C:\ProgramData\Autodesk\Adlm\ProductInformation.pit" >nul 2>&1
 del /f "%LOCALAPPDATA%\Autodesk\Genuine Autodesk Service\id.dat" >nul 2>&1
