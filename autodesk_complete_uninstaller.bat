@@ -706,6 +706,7 @@ if !DTC_WS_FOUND! equ 1 (
     echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
     echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
     echo      !CYLW!Tip: Most users choose N here.!R!
+    set "DTC_ANS="
     set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
     if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
 )
@@ -2163,6 +2164,7 @@ if !DTC_WS_FOUND! equ 1 (
     echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
     echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
     echo      !CYLW!Tip: Most users choose N here.!R!
+    set "DTC_ANS="
     set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
     if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
 )
@@ -4101,6 +4103,7 @@ echo.
 echo  !CRED!WARNING: these folders hold your project files. Anything not!R!
 echo  !CRED!fully uploaded to the Autodesk cloud is PERMANENTLY LOST.!R!
 echo.
+set "DTC_ANS="
 set /p "DTC_ANS=  Type YES to delete !DTC_FC! files in the folders above: "
 if /i not "!DTC_ANS!"=="YES" (
     echo  Aborted - nothing deleted.
