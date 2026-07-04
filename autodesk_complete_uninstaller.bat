@@ -2085,6 +2085,7 @@ echo. >> "!CLOG!"
 echo ======================================================== >> "!CLOG!"
 echo  DEEP CLEAN >> "!CLOG!"
 echo ======================================================== >> "!CLOG!"
+set "DCL_START=!time:~0,8!"
 
 REM Check for installer/download folders
 set "CLEAN_INSTALLERS=0"
@@ -2735,6 +2736,8 @@ echo  done.
 echo.
 echo  !CGRN!!BOLD!Deep clean complete.!R!
 echo [!time:~0,8!] Deep clean complete >> "!CLOG!"
+echo  !DIM!Started: !DCL_START!  Completed: !time:~0,8!!R!
+echo [!time:~0,8!] Deep Clean: Started !DCL_START! Completed !time:~0,8! >> "!CLOG!"
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
@@ -4726,6 +4729,7 @@ set "VLOG=!LOGDIR!\verify_details.txt"
 type nul > "!VLOG!"
 echo VERIFICATION DETAILS - %date% %time% >> "!VLOG!"
 echo ================================================ >> "!VLOG!"
+set "VF_START=!time:~0,8!"
 
 REM === 1. REGISTERED PRODUCTS ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![1/16]!R! Installed products..."
@@ -5147,6 +5151,8 @@ if !RM! gtr 0 (
 )
 echo  ========================================================
 echo.
+echo  !DIM!Started: !VF_START!  Completed: !time:~0,8!!R!
+echo [!time:~0,8!] Verify: Started !VF_START! Completed !time:~0,8! >> "!CLOG!"
 echo  Log and registry backups: !LOGDIR!
 echo [!time:~0,8!] Verify total: !RM! remaining >> "!CLOG!"
 echo. >> "!CLOG!"
