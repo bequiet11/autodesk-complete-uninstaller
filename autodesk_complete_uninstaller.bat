@@ -413,11 +413,11 @@ for /l %%i in (1,1,!PROD_COUNT!) do (
     set "P_TYPE_%%i=!UTYPE!"
     REM Classify priority: 1=addon/plugin 2=material lib 3=main product
     set "P_PRIO_%%i=3"
-    echo "!P_NAME_%%i!" | findstr /i "Enabler Plugin Add-in Addon Content Pack Language Service Pack Object" >nul 2>&1
+    echo "!P_NAME_%%i!" | findstr /i /c:"Enabler" /c:"Plugin" /c:"Add-in" /c:"Addon" /c:"Content Pack" /c:"Language Pack" /c:"Service Pack" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=1"
-    echo "!P_NAME_%%i!" | findstr /i "Material Library Medium Resolution Base Resolution" >nul 2>&1
+    echo "!P_NAME_%%i!" | findstr /i /c:"Material Library" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=5"
-    echo "!P_NAME_%%i!" | findstr /i "Material Library Medium" >nul 2>&1
+    echo "!P_NAME_%%i!" | findstr /i /c:"Medium Resolution" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=4"
     echo "!P_NAME_%%i!" | findstr /i "Desktop App" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=6"
