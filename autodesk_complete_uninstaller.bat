@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v5.11
+title Autodesk Universal Uninstaller v5.12
 
 REM === ANSI Color Setup ===
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
@@ -64,7 +64,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v5.11 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v5.12 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -73,7 +73,7 @@ set "CLOG=!LOGDIR!\console_log.txt"
 type nul > "!CLOG!"
 echo ============================================================ >> "!CLOG!"
 echo  CONSOLE OUTPUT LOG >> "!CLOG!"
-echo  Autodesk Universal Uninstaller v5.11 >> "!CLOG!"
+echo  Autodesk Universal Uninstaller v5.12 >> "!CLOG!"
 echo  Date: %date% %time% >> "!CLOG!"
 echo  Computer: %COMPUTERNAME%  User: %USERNAME% >> "!CLOG!"
 echo ============================================================ >> "!CLOG!"
@@ -141,9 +141,9 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  !CCYN!============================================================!R!
-echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.11         !R!
-echo  !CCYN!  !DIM!  Supports all versions: 2015-2026+                  !R!
-echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11          !R!
+echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.12                    !R!
+echo  !CCYN!  !DIM!  Supports all versions: 2015-2027+                       !R!
+echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11               !R!
 echo  !CCYN!============================================================!R!
 REM === File Integrity Check ===
 for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%~f0" SHA256 2^>nul') do (
