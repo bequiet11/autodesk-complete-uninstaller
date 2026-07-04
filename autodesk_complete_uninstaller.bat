@@ -27,16 +27,16 @@ set "INFO=!CCYN![INFO]!R!"
 
 REM === SHARED DATA LISTS ===
 REM Process names to kill (used by Phase B, Phase E, Deep Clean)
-set "KILL_PROCS=AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe"
+set "KILL_PROCS=AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe DesktopConnector.Applications.Tray.exe DesktopConnector.Core.Service.exe AdskAccessUIHost.exe"
 
 REM Service names to stop/delete (used by Phase B, Phase G, Deep Clean)
-set "SVC_NAMES=AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM"
+set "SVC_NAMES=AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService"
 
 REM HKCU named class keys to clean (used by Phase H2, Deep Clean, remnant scan, audit, verify)
 set "CLASS_KEYS=AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr"
 
 REM Process names for scan display (without .exe, for wmic/process detection)
-set "KILL_PROCS_SCAN=AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator"
+set "KILL_PROCS_SCAN=AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator DesktopConnector"
 
 REM IFEO executables to check for debugger blocks (used by Error 103, Phase H3, Deep Clean, verify)
 set "IFEO_EXES=ProcessManager.exe DownloadManager.exe InstallManager.exe install_manager.exe install_helper_tool.exe AdODIS-installer.exe GenuineService.exe AdskIdentityManager.exe Installer.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe AdSSO.exe AdskLicensingService.exe LogAnalyzer.exe"
@@ -2137,7 +2137,7 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v 
 
 echo.
 <nul set /p "=  Stopping services"
-for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM) do (
+for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM DesktopConnectorService) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         net stop "%%s" >nul 2>&1
@@ -2232,7 +2232,7 @@ echo  !CGRN!done.!R!
 echo.
 REM Kill again before folder deletion - component uninstallers may have spawned processes
 <nul set /p "=  Killing residual processes"
-for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe Installer.exe AdODIS.exe) do (
+for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe Installer.exe AdODIS.exe DesktopConnector.Applications.Tray.exe DesktopConnector.Core.Service.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
@@ -2825,7 +2825,7 @@ REM === 3. SERVICES ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 3/15]!R! Services....................... "
 set RS_SVC=0
 echo --- SERVICES --- >> "!SCANFILE!"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
     if !errorlevel! equ 0 (
         set /a RS_SVC+=1
@@ -3397,7 +3397,7 @@ set AU_SVC=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  3. AUTODESK SERVICES >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
     if !errorlevel! equ 0 (
         set /a AU_SVC+=1
@@ -4789,7 +4789,7 @@ echo [!time:~0,8!] Verify [2/16] Processes: !PR! >> "!CLOG!"
 REM === 3. SERVICES ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![3/16]!R! Services..."
 set SR=0
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
     if !errorlevel! equ 0 (
         set /a SR+=1
