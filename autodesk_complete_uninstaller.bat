@@ -2979,6 +2979,15 @@ for %%d in (
         echo. >> "!SCANFILE!"
     )
 )
+for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+    if exist "%%~d\" (
+        set /a RS_DATA+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_DATA!  !R!"
+        echo  EXISTS ^(Desktop Connector workspace - user data, opt-in removal only^): %%~d >> "!SCANFILE!"
+        dir /b "%%~d" >> "!SCANFILE!" 2>nul
+        echo. >> "!SCANFILE!"
+    )
+)
 echo. >> "!SCANFILE!"
 if !RS_DATA! gtr 0 (
     echo !ESC![50G!CRED!!RS_DATA! found                    !R!
@@ -3553,6 +3562,22 @@ if !AU_FOLD! equ 0 (
     echo  None found. >> "!AUDITFILE!"
 )
 echo. >> "!AUDITFILE!"
+
+REM --- Desktop Connector workspace (opt-in removal only - user project data) ---
+set AU_DTC=0
+for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+    if exist "%%~d\" (
+        set /a AU_DTC+=1
+        set DTC_FC=0
+        for /f %%n in ('dir /s /b "%%~d" 2^>nul ^| find /c /v ""') do set DTC_FC=%%n
+        echo  OPT-IN: %%~d  [!DTC_FC! files] - Desktop Connector workspace >> "!AUDITFILE!"
+        echo          User project data - removed ONLY if you opt in during cleanup. >> "!AUDITFILE!"
+    )
+)
+if !AU_DTC! gtr 0 (
+    echo  !CYLW!Desktop Connector workspace present - opt-in removal only ^(see report^)!R!
+)
+echo [!time:~0,8!] Audit: DTC workspace folders: !AU_DTC! >> "!CLOG!"
 
 REM === 5. C: DRIVE SEARCH ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 5/17]!R! Other Autodesk folders on C:..... "
