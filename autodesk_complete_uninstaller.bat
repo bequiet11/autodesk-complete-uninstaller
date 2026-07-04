@@ -146,8 +146,10 @@ echo  !CCYN!  !DIM!  Supports all versions: 2015-2027+                       !R!
 echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11               !R!
 echo  !CCYN!============================================================!R!
 REM === File Integrity Check ===
-for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%~f0" SHA256 2^>nul') do (
-    if not defined SCRIPT_HASH set "SCRIPT_HASH=%%h"
+if not defined SCRIPT_HASH (
+    for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%~f0" SHA256 2^>nul') do (
+        if not defined SCRIPT_HASH set "SCRIPT_HASH=%%h"
+    )
 )
 if defined SCRIPT_HASH (
     echo  !DIM!SHA-256: !SCRIPT_HASH!!R!
