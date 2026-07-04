@@ -175,6 +175,7 @@ echo  !DIM!Log: !LOGDIR!\uninstall_log.txt!R!
 echo  !DIM!Diagnostics: !LOGDIR!\diagnostics.log!R!
 echo  !DIM!Console log: !CLOG!!R!
 echo.
+set "MC="
 set /p "MC=  !CWHT!Enter choice [0-12]:!R! "
 echo [%date% %time%] Menu choice: !MC! >> "!CLOG!"
 if "!MC!"=="1" goto :scan_products
@@ -189,6 +190,9 @@ if "!MC!"=="10" goto :fix_error103
 if "!MC!"=="11" goto :fix_reboot_pending
 if "!MC!"=="12" goto :backup_templates
 if "!MC!"=="0" exit /b 0
+echo.
+echo  !CYLW!Invalid choice - please enter one of the numbers shown.!R!
+timeout /t 2 /nobreak >nul
 goto :main_menu
 
 REM ============================================================
