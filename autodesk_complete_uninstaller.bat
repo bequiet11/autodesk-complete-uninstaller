@@ -689,6 +689,25 @@ if !INSTALLER_FOUND! equ 1 (
     if /i "!FC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
+REM Check for Desktop Connector workspace (user project data - opt-in)
+set "DTC_CLEAN_WS=0"
+set "DTC_WS_FOUND=0"
+if exist "%USERPROFILE%\DC\" set "DTC_WS_FOUND=1"
+if exist "%USERPROFILE%\ACCDocs\" set "DTC_WS_FOUND=1"
+if !DTC_WS_FOUND! equ 1 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! A !CWHT!Desktop Connector workspace!R!!CYLW! was found on this machine.   !R!
+    echo  !CYLW! It holds ACC / BIM 360 !CWHT!project files!R!!CYLW! synced to this PC.    !R!
+    echo  !CYLW! It is !CWHT!NOT!R!!CYLW! removed by default.                              !R!
+    echo  !CYLW!============================================================!R!
+    echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
+    echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
+    echo      !CYLW!Tip: Most users choose N here.!R!
+    set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
+    if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
+)
+
 echo.
 set "FC_START=!time:~0,8!"
 echo  === FULL CLEAN START === >> "!LOGFILE!"
@@ -1601,6 +1620,28 @@ if !CLEAN_INSTALLERS! equ 1 (
     echo      !INST_DEL! installer items removed.
     echo  OPTIONAL: !INST_DEL! installer/download items removed >> "!LOGFILE!"
 )
+
+REM --- Optional: Desktop Connector workspace cleanup ---
+if !DTC_CLEAN_WS! equ 1 (
+    echo  !DIM![!time:~0,8!]!R! !CYLW!!BOLD![OPT]!R! !CWHT!Removing Desktop Connector workspace...!R!
+    taskkill /f /im "DesktopConnector.Applications.Tray.exe" >nul 2>&1
+    taskkill /f /im "DesktopConnector.Core.Service.exe" >nul 2>&1
+    net stop "DesktopConnectorService" >nul 2>&1
+    set DTC_DEL=0
+    for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+        if exist "%%~d\" (
+            <nul set /p "=      %%~nxd..."
+            rd /s /q "%%~d" 2>nul
+            if not exist "%%~d\" (
+                echo  !CGRN!deleted.!R!
+                set /a DTC_DEL+=1
+            )
+            if exist "%%~d\" echo  !CRED!LOCKED.!R!
+        )
+    )
+    echo      !DTC_DEL! workspace folder^(s^) removed.
+    echo  OPTIONAL: !DTC_DEL! Desktop Connector workspace folders removed >> "!LOGFILE!"
+)
 echo.
 
 REM --- Phase E2: Shortcut cleanup ---
@@ -2105,6 +2146,25 @@ if !INSTALLER_FOUND! equ 1 (
     if /i "!DC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
+REM Check for Desktop Connector workspace (user project data - opt-in)
+set "DTC_CLEAN_WS=0"
+set "DTC_WS_FOUND=0"
+if exist "%USERPROFILE%\DC\" set "DTC_WS_FOUND=1"
+if exist "%USERPROFILE%\ACCDocs\" set "DTC_WS_FOUND=1"
+if !DTC_WS_FOUND! equ 1 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! A !CWHT!Desktop Connector workspace!R!!CYLW! was found on this machine.   !R!
+    echo  !CYLW! It holds ACC / BIM 360 !CWHT!project files!R!!CYLW! synced to this PC.    !R!
+    echo  !CYLW! It is !CWHT!NOT!R!!CYLW! removed by default.                              !R!
+    echo  !CYLW!============================================================!R!
+    echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
+    echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
+    echo      !CYLW!Tip: Most users choose N here.!R!
+    set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
+    if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
+)
+
 echo.
 REM Offer restore point
 echo      !CCYN!Tip: A restore point is optional. The tool creates!R!
@@ -2366,6 +2426,29 @@ if !CLEAN_INSTALLERS! equ 1 (
         )
     )
     echo    !DC_INST_DEL! installer items removed.
+)
+
+REM --- Optional: Desktop Connector workspace cleanup ---
+if !DTC_CLEAN_WS! equ 1 (
+    echo.
+    echo  !CYLW!!BOLD!Removing Desktop Connector workspace [optional]...!R!
+    taskkill /f /im "DesktopConnector.Applications.Tray.exe" >nul 2>&1
+    taskkill /f /im "DesktopConnector.Core.Service.exe" >nul 2>&1
+    net stop "DesktopConnectorService" >nul 2>&1
+    set DTC_DEL=0
+    for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+        if exist "%%~d\" (
+            <nul set /p "=    %%~nxd..."
+            rd /s /q "%%~d" 2>nul
+            if not exist "%%~d\" (
+                echo  !CGRN!deleted.!R!
+                set /a DTC_DEL+=1
+            )
+            if exist "%%~d\" echo  !CRED!LOCKED.!R!
+        )
+    )
+    echo    !DTC_DEL! workspace folder^(s^) removed.
+    echo [!time:~0,8!] Deep Clean: !DTC_DEL! DTC workspace folders removed >> "!CLOG!"
 )
 
 echo.
