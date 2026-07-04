@@ -352,7 +352,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVer
                 set "P_UNINST_!PROD_COUNT!=!US!"
                 set "P_VER_!PROD_COUNT!=!VER!"
                 set "P_KEY_!PROD_COUNT!=!REGKEY!"
-                <nul set /p "= +!PROD_COUNT!"
+                <nul set /p "=+"
             )
         )
     )
@@ -390,7 +390,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Window
                     set "P_UNINST_!PROD_COUNT!=!US!"
                     set "P_VER_!PROD_COUNT!=!VER!"
                     set "P_KEY_!PROD_COUNT!=!REGKEY!"
-                    <nul set /p "= +!PROD_COUNT!"
+                    <nul set /p "=+"
                 )
             )
         )
