@@ -53,7 +53,8 @@ if %errorlevel% neq 0 (
     echo  !DIM!Please approve the User Account Control ^(UAC^) prompt.!R!
     echo  !DIM!If you decline, the tool cannot run.!R!
     echo.
-    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs" >nul 2>&1
+    set "ELEV_PATH=%~f0"
+    powershell -NoProfile -Command "Start-Process -FilePath $env:ELEV_PATH -Verb RunAs" >nul 2>&1
     exit /b
 )
 
