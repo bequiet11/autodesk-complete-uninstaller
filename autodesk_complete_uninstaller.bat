@@ -827,7 +827,7 @@ REM --- Phase B: Stop everything ---
 echo [!time:~0,8!] Phase B started >> "!CLOG!"
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CCYN!!BOLD![B]!R! Stopping services"
 echo  PHASE B START %time% >> "!DIAGFILE!"
-for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM) do (
+for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM DesktopConnectorService) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         net stop "%%s" >nul 2>&1
@@ -2129,7 +2129,6 @@ echo. >> "!CLOG!"
 echo ======================================================== >> "!CLOG!"
 echo  DEEP CLEAN >> "!CLOG!"
 echo ======================================================== >> "!CLOG!"
-set "DCL_START=!time:~0,8!"
 
 REM Check for installer/download folders
 set "CLEAN_INSTALLERS=0"
@@ -2168,6 +2167,7 @@ if !DTC_WS_FOUND! equ 1 (
     set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
     if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
 )
+set "DCL_START=!time:~0,8!"
 
 echo.
 REM Offer restore point
