@@ -2982,10 +2982,10 @@ for %%d in (
         echo. >> "!SCANFILE!"
     )
 )
+set RS_DTCWS=0
 for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
     if exist "%%~d\" (
-        set /a RS_DATA+=1
-        <nul set /p "=!ESC![50G!DIM!scanning: !RS_DATA!  !R!"
+        set /a RS_DTCWS+=1
         echo  EXISTS ^(Desktop Connector workspace - user data, opt-in removal only^): %%~d >> "!SCANFILE!"
         dir /b "%%~d" >> "!SCANFILE!" 2>nul
         echo. >> "!SCANFILE!"
@@ -2999,6 +2999,10 @@ if !RS_DATA! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
 echo [!time:~0,8!] Scan [5/15] DataFolders: !RS_DATA! >> "!CLOG!"
+if !RS_DTCWS! gtr 0 (
+    echo      !CYLW!Desktop Connector workspace present ^(user data - not counted^)!R!
+    echo [!time:~0,8!] Scan [5/15] DTC workspace: !RS_DTCWS! ^(informational^) >> "!CLOG!"
+)
 
 REM === 6. FULL C: DRIVE SEARCH ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/15]!R! Full C: drive search........... "
