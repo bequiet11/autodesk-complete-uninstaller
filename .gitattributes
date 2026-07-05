@@ -1,0 +1,5 @@
+# Windows batch scripts must retain CRLF line endings so cmd.exe can resolve
+# goto/call labels located deep in the file. Store verbatim (no EOL
+# normalization) so clone, raw, zip, and release-asset downloads are all CRLF.
+*.bat -text
+*.cmd -text

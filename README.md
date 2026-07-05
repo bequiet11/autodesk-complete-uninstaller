@@ -1,18 +1,18 @@
 Autodesk Complete Uninstaller
 
-A single-file Windows batch tool that fully detects, uninstalls, and deep-cleans **every** Autodesk product from a machine — all versions from 2015 through 2026+. **Achieves a verified zero-remnant clean on real machines without requiring a reboot.**
+A single-file Windows batch tool that fully detects, uninstalls, and deep-cleans **every** Autodesk product from a machine — all versions from 2015 through 2027+. **Achieves a verified zero-remnant clean on real machines without requiring a reboot.**
 
 Built because Autodesk's own Uninstall Tool was [discontinued after 2020](https://resources.imaginit.com/support-blog/where-is-the-autodesk-uninstall-tool-with-autodesk-2022-products), and the standard Windows "Add/Remove Programs" method leaves behind gigabytes of orphaned files, registry keys, services, and licensing artifacts that block fresh installations and waste disk space.
 
 [![GitHub release](https://img.shields.io/github/v/release/bequiet11/autodesk-complete-uninstaller?color=blue&label=Latest%20Release)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases/latest)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](https://github.com/bequiet11/autodesk-complete-uninstaller/blob/main/LICENSE)
 [![Windows](https://img.shields.io/badge/Platform-Windows%2010%2F11-0078D6?logo=windows&logoColor=white)](https://github.com/bequiet11/autodesk-complete-uninstaller)
-[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F62_Clean-brightgreen?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/6238d1cec0f48daa373fd76115524394d15b2a51fb0ce4ef5e8ef5e71daae530)
+[![VirusTotal](https://img.shields.io/badge/VirusTotal-0%2F61_Clean-brightgreen?logo=virustotal&logoColor=white)](https://www.virustotal.com/gui/file/9626c06cc5ea16fbe82fc2983b4b899927831b1feaf53f3c3a6a2d584c0e9a80)
 [![GitHub downloads](https://img.shields.io/github/downloads/bequiet11/autodesk-complete-uninstaller/total.svg?style=flat&color=brightgreen&label=Downloads)](https://github.com/bequiet11/autodesk-complete-uninstaller/releases)
 
 https://github.com/bequiet11/autodesk-complete-uninstaller/archive/refs/heads/main.zip
 
-> **Antivirus Note:** The VirusTotal scan shows **0/62 Clean** — no security vendor flags this file as malicious. The script is open-source and you can read every line in Notepad before running it.
+> **Antivirus Note:** The VirusTotal scan shows **0/61 Clean** — no security vendor flags this file as malicious. The script is open-source and you can read every line in Notepad before running it.
 
 ![Recording2026-04-02144243_v5 8_edit_5-50m_10q_60fps_x264_no-aud-ezgif com-video-to-gif-converter (1)](https://github.com/user-attachments/assets/adb983eb-25db-4a48-8457-869d77ac7c17)
 
@@ -58,10 +58,22 @@ https://github.com/user-attachments/assets/988e9837-abfa-4a4b-9aa0-c91dc8f088c4
 - **Registry backup** before deletion — `.reg` export files saved to Desktop
 - **System Restore Point** creation (optional) with 24-hour limit bypass
 - **Comprehensive diagnostics** — generates `diagnostics.log`, `uninstall_log.txt`, and `verify_details.txt` for troubleshooting
-- **12-point deep verification scan** — checks products, processes, services, folders, user data, registry hives, COM/CLSID deep scan, legacy licensing, env variables, shortcuts, tasks, and firewall rules
+- **17-point deep verification scan** — checks products, processes, services, folders, user data, registry hives, COM/CLSID deep scan, legacy licensing, env variables, shortcuts, tasks, firewall rules, IFEO debugger blocks, pending file renames, hosts file, and Desktop Connector
 - **Remnant search tool** — scans entire C: drive for any Autodesk folders, deep-searches registry for file associations and COM objects
 - **No reboot required** — achieves full clean in a single run on real machines
 - **Single `.bat` file** — no dependencies, no installation, no PowerShell execution policy issues
+
+---
+
+## What's New in v5.12
+
+- **Desktop Connector coverage** — the Desktop Connector tray process and background service are now in the kill and stop lists, with opt-in local workspace cleanup (`%USERPROFILE%\DC`, `%USERPROFILE%\ACCDocs`) guarded by a data-loss warning, a new menu option **[9]**, and remnant-scan/audit/verify reporting. Replaces Autodesk's manual "Microsoft Uninstall Troubleshooter + delete folders by hand" guidance.
+- **2027 product line supported** — Revit/AutoCAD/Civil 3D/Inventor/Vault/InfraWorks/ReCap 2027. Detection is Publisher-based, verified against ODIS 2027 registration.
+- **17-point final verification** (was 16) — new Desktop Connector check.
+- **Fixed:** product priority classification could mislabel products whose names contain bare "Service"/"Content"/"Library" words.
+- **Fixed:** pressing Enter at the menu no longer repeats the last action; invalid input now gets feedback.
+- **Faster menu redraw** — script hash is computed once per session.
+- **Deep Clean and Verify** now print Started/Completed timestamps.
 
 ---
 
@@ -75,7 +87,7 @@ https://github.com/user-attachments/assets/988e9837-abfa-4a4b-9aa0-c91dc8f088c4
 | **64-bit Windows** | ✅ |
 | **Autodesk 2015–2021** (Classic/MSI installer) | ✅ |
 | **Autodesk 2020–2021** (mixed ODIS + MSI transition) | ✅ |
-| **Autodesk 2022–2026+** (ODIS-only installer) | ✅ |
+| **Autodesk 2022–2027+** (ODIS-only installer) | ✅ |
 | **Windows Server** | ⚠️ Restore Point not available on Server editions |
 
 ---
@@ -98,11 +110,14 @@ https://github.com/user-attachments/assets/988e9837-abfa-4a4b-9aa0-c91dc8f088c4
 | **[2]** | **Uninstall Selected** — Pick specific products to remove individually |
 | **[3]** | **Full Uninstall + Deep Clean** — Complete removal: uninstall all products + remove all traces |
 | **[4]** | **Deep Clean Only** — Remove remnants without product uninstall (for post-Control Panel cleanup) |
-| **[5]** | **Final Verification** — 12-point deep scan to confirm zero remnants |
+| **[5]** | **Final Verification** — 17-point deep scan to confirm zero remnants |
 | **[6]** | **Create System Restore Point** — Create a restore point before making changes |
 | **[7]** | **Search for ALL Autodesk Remnants** — Full system scan — folders, registry deep search, processes, services |
-| **[8]** | **Full System Audit** — 13-point read-only preview of everything that would be removed, with disk space calculation |
+| **[8]** | **Full System Audit** — 17-point read-only preview of everything that would be removed, with disk space calculation |
+| **[9]** | **Clean Desktop Connector Workspace** — Remove local ACC / BIM 360 sync data (`%USERPROFILE%\DC`, `%USERPROFILE%\ACCDocs`) — opt-in, requires typing YES |
 | **[10]** | **Fix Error 103** — 9-point diagnostic and repair for ODIS installer issues |
+| **[11]** | **Fix Restart Pending** — Clear pending reboot state |
+| **[12]** | **Backup Templates** — Save custom templates and settings |
 | **[0]** | **Exit** |
 
 ---
@@ -123,7 +138,7 @@ https://github.com/user-attachments/assets/988e9837-abfa-4a4b-9aa0-c91dc8f088c4
 | **H** | Backs up and deletes all Autodesk registry keys |
 | **H2** | Cleans user file associations (DWGTrueView, AutoCAD class keys, COM CLSIDs, MuiCache) |
 | **I** | Removes Autodesk Genuine Service (always last) |
-| **J** | Runs 12-point final verification |
+| **J** | Runs 17-point final verification |
 
 ---
 
@@ -170,7 +185,7 @@ ADSKFLEX_LICENSE_FILE environment variable
 ```
 
 ### Services
-- AdskLicensingService, AdskAccessServiceHost, AdAppMgrSvc, AdskNLM
+- AdskLicensingService, AdskAccessServiceHost, AdAppMgrSvc, AdskNLM, DesktopConnectorService
 - Autodesk Genuine Service
 - FlexNet Licensing Service 64 (**only if you confirm** — shared with Adobe)
 
@@ -223,7 +238,7 @@ The FlexNet Licensing Service 64 is shared between Autodesk and Adobe. If you us
 | Products remain after uninstall | Run [4] Deep Clean to force-remove |
 | ODIS uninstaller fails (exit:1) | Phase C2 automatically force-cleans these |
 | Folders show as LOCKED | Tool uses takeown/icacls + Explorer restart; run Deep Clean again |
-| Verification shows items in [7/12] | Run [4] Deep Clean to remove file associations |
+| Verification shows items in [7/17] | Run [4] Deep Clean to remove file associations |
 | Error 103 during install | Run [10] Fix Error 103 for 9-point ODIS diagnosis and guided repair |
 | Antivirus blocks or quarantines the script | Add an exclusion for the `.bat` file or temporarily disable real-time protection; this is a false positive |
 | Windows SmartScreen blocks the file | Click **More info** > **Run anyway** — the script is unsigned but open source |

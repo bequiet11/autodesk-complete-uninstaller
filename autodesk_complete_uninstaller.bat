@@ -1,7 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 chcp 437 >nul 2>&1
-title Autodesk Universal Uninstaller v5.11
+title Autodesk Universal Uninstaller v5.12
 
 REM === ANSI Color Setup ===
 for /f %%a in ('echo prompt $E ^| cmd') do set "ESC=%%a"
@@ -27,16 +27,16 @@ set "INFO=!CCYN![INFO]!R!"
 
 REM === SHARED DATA LISTS ===
 REM Process names to kill (used by Phase B, Phase E, Deep Clean)
-set "KILL_PROCS=AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe"
+set "KILL_PROCS=AdSSO.exe AdskLicensingService.exe AdskLicensingAgent.exe AdskIdentityManager.exe GenuineService.exe AdAppMgrSvc.exe AutodeskDesktopApp.exe RevitAccelerator.exe acad.exe lmgrd.exe adskflex.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe ADPClientService.exe AcEventSync.exe FNPLicensingService64.exe Installer.exe setup.exe AdODIS.exe DesktopConnector.Applications.Tray.exe DesktopConnector.Core.Service.exe AdskAccessUIHost.exe"
 
 REM Service names to stop/delete (used by Phase B, Phase G, Deep Clean)
-set "SVC_NAMES=AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM"
+set "SVC_NAMES=AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService"
 
 REM HKCU named class keys to clean (used by Phase H2, Deep Clean, remnant scan, audit, verify)
 set "CLASS_KEYS=AutodeskDGN AutoLISPFile 3dsFile cdc_auto_file CompleteR16PlotConfigurationFile adsk.idmgr adskidmgr"
 
 REM Process names for scan display (without .exe, for wmic/process detection)
-set "KILL_PROCS_SCAN=AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator"
+set "KILL_PROCS_SCAN=AdSSO AdskLicensing AdskAccess GenuineService AdAppMgr AutodeskDesktopApp acad lmgrd adskflex AdODIS Installer RevitAccelerator DesktopConnector"
 
 REM IFEO executables to check for debugger blocks (used by Error 103, Phase H3, Deep Clean, verify)
 set "IFEO_EXES=ProcessManager.exe DownloadManager.exe InstallManager.exe install_manager.exe install_helper_tool.exe AdODIS-installer.exe GenuineService.exe AdskIdentityManager.exe Installer.exe AdskAccessServiceHost.exe AdskAccessService.exe AdskAccessCore.exe AdSSO.exe AdskLicensingService.exe LogAnalyzer.exe"
@@ -53,7 +53,8 @@ if %errorlevel% neq 0 (
     echo  !DIM!Please approve the User Account Control ^(UAC^) prompt.!R!
     echo  !DIM!If you decline, the tool cannot run.!R!
     echo.
-    powershell -NoProfile -Command "Start-Process -FilePath '%~f0' -Verb RunAs" >nul 2>&1
+    set "ELEV_PATH=%~f0"
+    powershell -NoProfile -Command "Start-Process -FilePath $env:ELEV_PATH -Verb RunAs" >nul 2>&1
     exit /b
 )
 
@@ -64,7 +65,7 @@ set "DIAGFILE=!LOGDIR!\diagnostics.log"
 
 REM Create log file with header
 type nul > "!LOGFILE!"
-echo Autodesk Universal Uninstaller v5.11 >> "!LOGFILE!"
+echo Autodesk Universal Uninstaller v5.12 >> "!LOGFILE!"
 echo Date: %date% %time% >> "!LOGFILE!"
 echo ------------------------------------------------ >> "!LOGFILE!"
 
@@ -73,7 +74,7 @@ set "CLOG=!LOGDIR!\console_log.txt"
 type nul > "!CLOG!"
 echo ============================================================ >> "!CLOG!"
 echo  CONSOLE OUTPUT LOG >> "!CLOG!"
-echo  Autodesk Universal Uninstaller v5.11 >> "!CLOG!"
+echo  Autodesk Universal Uninstaller v5.12 >> "!CLOG!"
 echo  Date: %date% %time% >> "!CLOG!"
 echo  Computer: %COMPUTERNAME%  User: %USERNAME% >> "!CLOG!"
 echo ============================================================ >> "!CLOG!"
@@ -141,13 +142,15 @@ for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 cls
 echo.
 echo  !CCYN!============================================================!R!
-echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.11         !R!
-echo  !CCYN!  !DIM!  Supports all versions: 2015-2026+                  !R!
-echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11          !R!
+echo  !CCYN!  !BOLD!!CWHT!  AUTODESK UNIVERSAL UNINSTALLER v5.12                    !R!
+echo  !CCYN!  !DIM!  Supports all versions: 2015-2027+                       !R!
+echo  !CCYN!  !DIM!  Compatible with Windows 10 and Windows 11               !R!
 echo  !CCYN!============================================================!R!
 REM === File Integrity Check ===
-for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%~f0" SHA256 2^>nul') do (
-    if not defined SCRIPT_HASH set "SCRIPT_HASH=%%h"
+if not defined SCRIPT_HASH (
+    for /f "skip=1 tokens=*" %%h in ('certutil -hashfile "%~f0" SHA256 2^>nul') do (
+        if not defined SCRIPT_HASH set "SCRIPT_HASH=%%h"
+    )
 )
 if defined SCRIPT_HASH (
     echo  !DIM!SHA-256: !SCRIPT_HASH!!R!
@@ -158,10 +161,11 @@ echo   !CWHT![1]!R!  !CCYN!Scan!R! Installed Autodesk Software
 echo   !CWHT![2]!R!  !CCYN!Uninstall!R! Selected Products
 echo   !CRED![3]!R!  !CRED!Full Uninstall + Deep Clean!R! ALL Products
 echo   !CYLW![4]!R!  !CYLW!Deep Clean Only!R! - remnants, no product uninstall
-echo   !CGRN![5]!R!  !CGRN!Final Verification!R! - 16-point deep scan
+echo   !CGRN![5]!R!  !CGRN!Final Verification!R! - 17-point deep scan
 echo   !CBLU![6]!R!  !CBLU!Create System Restore Point!R!
 echo   !CMAG![7]!R!  !CMAG!Search!R! for ALL Autodesk remnants
 echo   !CWHT![8]!R!  !CWHT!Full System Audit!R! - preview everything that will be removed
+echo   !CYLW![9]!R!  !CYLW!Clean Desktop Connector Workspace!R! - local ACC sync data
 echo.
 echo   !CYLW![10]!R! !CYLW!Fix Error 103!R! - diagnose and repair ODIS installer issues
 echo   !CYLW![11]!R! !CYLW!Fix Restart Pending!R! - clear pending reboot state
@@ -173,6 +177,7 @@ echo  !DIM!Log: !LOGDIR!\uninstall_log.txt!R!
 echo  !DIM!Diagnostics: !LOGDIR!\diagnostics.log!R!
 echo  !DIM!Console log: !CLOG!!R!
 echo.
+set "MC="
 set /p "MC=  !CWHT!Enter choice [0-12]:!R! "
 echo [%date% %time%] Menu choice: !MC! >> "!CLOG!"
 if "!MC!"=="1" goto :scan_products
@@ -183,10 +188,14 @@ if "!MC!"=="5" goto :run_verify
 if "!MC!"=="6" goto :create_restore
 if "!MC!"=="7" goto :search_remnants
 if "!MC!"=="8" goto :full_audit
+if "!MC!"=="9" goto :dtc_workspace
 if "!MC!"=="10" goto :fix_error103
 if "!MC!"=="11" goto :fix_reboot_pending
 if "!MC!"=="12" goto :backup_templates
 if "!MC!"=="0" exit /b 0
+echo.
+echo  !CYLW!Invalid choice - please enter one of the numbers shown.!R!
+timeout /t 2 /nobreak >nul
 goto :main_menu
 
 REM ============================================================
@@ -346,7 +355,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVer
                 set "P_UNINST_!PROD_COUNT!=!US!"
                 set "P_VER_!PROD_COUNT!=!VER!"
                 set "P_KEY_!PROD_COUNT!=!REGKEY!"
-                <nul set /p "= +!PROD_COUNT!"
+                <nul set /p "=+"
             )
         )
     )
@@ -384,7 +393,7 @@ for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\WOW6432Node\Microsoft\Window
                     set "P_UNINST_!PROD_COUNT!=!US!"
                     set "P_VER_!PROD_COUNT!=!VER!"
                     set "P_KEY_!PROD_COUNT!=!REGKEY!"
-                    <nul set /p "= +!PROD_COUNT!"
+                    <nul set /p "=+"
                 )
             )
         )
@@ -407,11 +416,11 @@ for /l %%i in (1,1,!PROD_COUNT!) do (
     set "P_TYPE_%%i=!UTYPE!"
     REM Classify priority: 1=addon/plugin 2=material lib 3=main product
     set "P_PRIO_%%i=3"
-    echo "!P_NAME_%%i!" | findstr /i "Enabler Plugin Add-in Addon Content Pack Language Service Pack Object" >nul 2>&1
+    echo "!P_NAME_%%i!" | findstr /i /c:"Enabler" /c:"Plugin" /c:"Add-in" /c:"Addon" /c:"Content Pack" /c:"Language Pack" /c:"Service Pack" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=1"
-    echo "!P_NAME_%%i!" | findstr /i "Material Library Medium Resolution Base Resolution" >nul 2>&1
+    echo "!P_NAME_%%i!" | findstr /i /c:"Material Library" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=5"
-    echo "!P_NAME_%%i!" | findstr /i "Material Library Medium" >nul 2>&1
+    echo "!P_NAME_%%i!" | findstr /i /c:"Medium Resolution" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=4"
     echo "!P_NAME_%%i!" | findstr /i "Desktop App" >nul 2>&1
     if !errorlevel! equ 0 set "P_PRIO_%%i=6"
@@ -683,6 +692,26 @@ if !INSTALLER_FOUND! equ 1 (
     if /i "!FC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
+REM Check for Desktop Connector workspace (user project data - opt-in)
+set "DTC_CLEAN_WS=0"
+set "DTC_WS_FOUND=0"
+if exist "%USERPROFILE%\DC\" set "DTC_WS_FOUND=1"
+if exist "%USERPROFILE%\ACCDocs\" set "DTC_WS_FOUND=1"
+if !DTC_WS_FOUND! equ 1 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! A !CWHT!Desktop Connector workspace!R!!CYLW! was found on this machine.   !R!
+    echo  !CYLW! It holds ACC / BIM 360 !CWHT!project files!R!!CYLW! synced to this PC.    !R!
+    echo  !CYLW! It is !CWHT!NOT!R!!CYLW! removed by default.                              !R!
+    echo  !CYLW!============================================================!R!
+    echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
+    echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
+    echo      !CYLW!Tip: Most users choose N here.!R!
+    set "DTC_ANS="
+    set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
+    if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
+)
+
 echo.
 set "FC_START=!time:~0,8!"
 echo  === FULL CLEAN START === >> "!LOGFILE!"
@@ -799,7 +828,7 @@ REM --- Phase B: Stop everything ---
 echo [!time:~0,8!] Phase B started >> "!CLOG!"
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CCYN!!BOLD![B]!R! Stopping services"
 echo  PHASE B START %time% >> "!DIAGFILE!"
-for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM) do (
+for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM DesktopConnectorService) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         net stop "%%s" >nul 2>&1
@@ -1595,6 +1624,28 @@ if !CLEAN_INSTALLERS! equ 1 (
     echo      !INST_DEL! installer items removed.
     echo  OPTIONAL: !INST_DEL! installer/download items removed >> "!LOGFILE!"
 )
+
+REM --- Optional: Desktop Connector workspace cleanup ---
+if !DTC_CLEAN_WS! equ 1 (
+    echo  !DIM![!time:~0,8!]!R! !CYLW!!BOLD![OPT]!R! !CWHT!Removing Desktop Connector workspace...!R!
+    taskkill /f /im "DesktopConnector.Applications.Tray.exe" >nul 2>&1
+    taskkill /f /im "DesktopConnector.Core.Service.exe" >nul 2>&1
+    net stop "DesktopConnectorService" >nul 2>&1
+    set DTC_DEL=0
+    for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+        if exist "%%~d\" (
+            <nul set /p "=      %%~nxd..."
+            rd /s /q "%%~d" 2>nul
+            if not exist "%%~d\" (
+                echo  !CGRN!deleted.!R!
+                set /a DTC_DEL+=1
+            )
+            if exist "%%~d\" echo  !CRED!LOCKED.!R!
+        )
+    )
+    echo      !DTC_DEL! workspace folder^(s^) removed.
+    echo  OPTIONAL: !DTC_DEL! Desktop Connector workspace folders removed >> "!LOGFILE!"
+)
 echo.
 
 REM --- Phase E2: Shortcut cleanup ---
@@ -2098,6 +2149,27 @@ if !INSTALLER_FOUND! equ 1 (
     if /i "!DC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
+REM Check for Desktop Connector workspace (user project data - opt-in)
+set "DTC_CLEAN_WS=0"
+set "DTC_WS_FOUND=0"
+if exist "%USERPROFILE%\DC\" set "DTC_WS_FOUND=1"
+if exist "%USERPROFILE%\ACCDocs\" set "DTC_WS_FOUND=1"
+if !DTC_WS_FOUND! equ 1 (
+    echo.
+    echo  !CYLW!============================================================!R!
+    echo  !CYLW! A !CWHT!Desktop Connector workspace!R!!CYLW! was found on this machine.   !R!
+    echo  !CYLW! It holds ACC / BIM 360 !CWHT!project files!R!!CYLW! synced to this PC.    !R!
+    echo  !CYLW! It is !CWHT!NOT!R!!CYLW! removed by default.                              !R!
+    echo  !CYLW!============================================================!R!
+    echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
+    echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
+    echo      !CYLW!Tip: Most users choose N here.!R!
+    set "DTC_ANS="
+    set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
+    if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
+)
+set "DCL_START=!time:~0,8!"
+
 echo.
 REM Offer restore point
 echo      !CCYN!Tip: A restore point is optional. The tool creates!R!
@@ -2130,7 +2202,7 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v 
 
 echo.
 <nul set /p "=  Stopping services"
-for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM) do (
+for %%s in (AdAppMgrSvc AdskAccessServiceHost AdskLicensingService AdskNLM DesktopConnectorService) do (
     sc query "%%s" >nul 2>&1
     if !errorlevel! equ 0 (
         net stop "%%s" >nul 2>&1
@@ -2225,7 +2297,7 @@ echo  !CGRN!done.!R!
 echo.
 REM Kill again before folder deletion - component uninstallers may have spawned processes
 <nul set /p "=  Killing residual processes"
-for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe Installer.exe AdODIS.exe) do (
+for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe Installer.exe AdODIS.exe DesktopConnector.Applications.Tray.exe DesktopConnector.Core.Service.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
 )
 wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
@@ -2359,6 +2431,29 @@ if !CLEAN_INSTALLERS! equ 1 (
         )
     )
     echo    !DC_INST_DEL! installer items removed.
+)
+
+REM --- Optional: Desktop Connector workspace cleanup ---
+if !DTC_CLEAN_WS! equ 1 (
+    echo.
+    echo  !CYLW!!BOLD!Removing Desktop Connector workspace [optional]...!R!
+    taskkill /f /im "DesktopConnector.Applications.Tray.exe" >nul 2>&1
+    taskkill /f /im "DesktopConnector.Core.Service.exe" >nul 2>&1
+    net stop "DesktopConnectorService" >nul 2>&1
+    set DTC_DEL=0
+    for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+        if exist "%%~d\" (
+            <nul set /p "=    %%~nxd..."
+            rd /s /q "%%~d" 2>nul
+            if not exist "%%~d\" (
+                echo  !CGRN!deleted.!R!
+                set /a DTC_DEL+=1
+            )
+            if exist "%%~d\" echo  !CRED!LOCKED.!R!
+        )
+    )
+    echo    !DTC_DEL! workspace folder^(s^) removed.
+    echo [!time:~0,8!] Deep Clean: !DTC_DEL! DTC workspace folders removed >> "!CLOG!"
 )
 
 echo.
@@ -2729,6 +2824,8 @@ echo  done.
 echo.
 echo  !CGRN!!BOLD!Deep clean complete.!R!
 echo [!time:~0,8!] Deep clean complete >> "!CLOG!"
+echo  !DIM!Started: !DCL_START!  Completed: !time:~0,8!!R!
+echo [!time:~0,8!] Deep Clean: Started !DCL_START! Completed !time:~0,8! >> "!CLOG!"
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
@@ -2816,7 +2913,7 @@ REM === 3. SERVICES ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 3/15]!R! Services....................... "
 set RS_SVC=0
 echo --- SERVICES --- >> "!SCANFILE!"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
     if !errorlevel! equ 0 (
         set /a RS_SVC+=1
@@ -2885,6 +2982,15 @@ for %%d in (
         echo. >> "!SCANFILE!"
     )
 )
+set RS_DTCWS=0
+for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+    if exist "%%~d\" (
+        set /a RS_DTCWS+=1
+        echo  EXISTS ^(Desktop Connector workspace - user data, opt-in removal only^): %%~d >> "!SCANFILE!"
+        dir /b "%%~d" >> "!SCANFILE!" 2>nul
+        echo. >> "!SCANFILE!"
+    )
+)
 echo. >> "!SCANFILE!"
 if !RS_DATA! gtr 0 (
     echo !ESC![50G!CRED!!RS_DATA! found                    !R!
@@ -2893,6 +2999,10 @@ if !RS_DATA! equ 0 (
     echo !ESC![50G!CGRN!none                       !R!
 )
 echo [!time:~0,8!] Scan [5/15] DataFolders: !RS_DATA! >> "!CLOG!"
+if !RS_DTCWS! gtr 0 (
+    echo      !CYLW!Desktop Connector workspace present ^(user data - not counted^)!R!
+    echo [!time:~0,8!] Scan [5/15] DTC workspace: !RS_DTCWS! ^(informational^) >> "!CLOG!"
+)
 
 REM === 6. FULL C: DRIVE SEARCH ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/15]!R! Full C: drive search........... "
@@ -3388,7 +3498,7 @@ set AU_SVC=0
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
 echo  3. AUTODESK SERVICES >> "!AUDITFILE!"
 echo ------------------------------------------------------------ >> "!AUDITFILE!"
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
     if !errorlevel! equ 0 (
         set /a AU_SVC+=1
@@ -3459,6 +3569,22 @@ if !AU_FOLD! equ 0 (
     echo  None found. >> "!AUDITFILE!"
 )
 echo. >> "!AUDITFILE!"
+
+REM --- Desktop Connector workspace (opt-in removal only - user project data) ---
+set AU_DTC=0
+for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+    if exist "%%~d\" (
+        set /a AU_DTC+=1
+        set DTC_FC=0
+        for /f %%n in ('dir /s /b "%%~d" 2^>nul ^| find /c /v ""') do set DTC_FC=%%n
+        echo  OPT-IN: %%~d  [!DTC_FC! files] - Desktop Connector workspace >> "!AUDITFILE!"
+        echo          User project data - removed ONLY if you opt in during cleanup. >> "!AUDITFILE!"
+    )
+)
+if !AU_DTC! gtr 0 (
+    echo  !CYLW!Desktop Connector workspace present - opt-in removal only ^(see report^)!R!
+)
+echo [!time:~0,8!] Audit: DTC workspace folders: !AU_DTC! >> "!CLOG!"
 
 REM === 5. C: DRIVE SEARCH ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 5/17]!R! Other Autodesk folders on C:..... "
@@ -3934,6 +4060,82 @@ echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
+pause
+goto :main_menu
+
+REM ============================================================
+REM CLEAN DESKTOP CONNECTOR WORKSPACE (OPT-IN)
+REM ============================================================
+:dtc_workspace
+cls
+echo.
+echo  ========================================================
+echo   !CYLW!!BOLD!CLEAN DESKTOP CONNECTOR WORKSPACE!R!
+echo  ========================================================
+echo.
+echo  Desktop Connector syncs ACC / BIM 360 project files to
+echo  this PC. Its local workspace can survive uninstalls.
+echo  This option removes ONLY the local workspace folders:
+echo    %USERPROFILE%\DC
+echo    %USERPROFILE%\ACCDocs
+echo.
+echo  For full Desktop Connector removal use option 3 or 4.
+echo.
+echo. >> "!CLOG!"
+echo ======================================================== >> "!CLOG!"
+echo  CLEAN DESKTOP CONNECTOR WORKSPACE >> "!CLOG!"
+echo ======================================================== >> "!CLOG!"
+set DTC_WS_FOUND=0
+set DTC_FC=0
+for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+    if exist "%%~d\" (
+        set DTC_WS_FOUND=1
+        set FC=0
+        for /f %%n in ('dir /s /b "%%~d" 2^>nul ^| find /c /v ""') do set FC=%%n
+        set /a DTC_FC+=FC
+        echo   FOUND: %%~d  [!FC! files]
+        echo   FOUND: %%~d  [!FC! files] >> "!CLOG!"
+    )
+)
+if !DTC_WS_FOUND! equ 0 (
+    echo  !CGRN!No Desktop Connector workspace found - nothing to clean.!R!
+    echo [!time:~0,8!] DTC workspace: none found >> "!CLOG!"
+    echo.
+    pause
+    goto :main_menu
+)
+echo.
+echo  !CRED!WARNING: these folders hold your project files. Anything not!R!
+echo  !CRED!fully uploaded to the Autodesk cloud is PERMANENTLY LOST.!R!
+echo.
+set "DTC_ANS="
+set /p "DTC_ANS=  Type YES to delete !DTC_FC! files in the folders above: "
+if /i not "!DTC_ANS!"=="YES" (
+    echo  Aborted - nothing deleted.
+    echo [!time:~0,8!] DTC workspace: aborted by user >> "!CLOG!"
+    pause
+    goto :main_menu
+)
+taskkill /f /im "DesktopConnector.Applications.Tray.exe" >nul 2>&1
+taskkill /f /im "DesktopConnector.Core.Service.exe" >nul 2>&1
+net stop "DesktopConnectorService" >nul 2>&1
+set DTC_DEL=0
+for %%d in ("%USERPROFILE%\DC" "%USERPROFILE%\ACCDocs") do (
+    if exist "%%~d\" (
+        <nul set /p "=  %%~nxd..."
+        rd /s /q "%%~d" 2>nul
+        if not exist "%%~d\" (
+            echo  !CGRN!deleted.!R!
+            set /a DTC_DEL+=1
+        )
+        if exist "%%~d\" echo  !CRED!LOCKED - close File Explorer windows and retry.!R!
+    )
+)
+echo.
+echo  !CGRN!!DTC_DEL! workspace folder^(s^) removed.!R!
+echo [!time:~0,8!] DTC workspace: !DTC_DEL! folders removed >> "!CLOG!"
+echo  DTC WORKSPACE: !DTC_DEL! folders removed >> "!LOGFILE!"
+echo.
 pause
 goto :main_menu
 
@@ -4720,9 +4922,10 @@ set "VLOG=!LOGDIR!\verify_details.txt"
 type nul > "!VLOG!"
 echo VERIFICATION DETAILS - %date% %time% >> "!VLOG!"
 echo ================================================ >> "!VLOG!"
+set "VF_START=!time:~0,8!"
 
 REM === 1. REGISTERED PRODUCTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![1/16]!R! Installed products..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![1/17]!R! Installed products..."
 set VP=0
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\Uninstall" /s /v "DisplayName" 2^>nul ^| findstr /i "HKEY_"') do (
     set "V_PUB="
@@ -4751,10 +4954,10 @@ if !VP! gtr 0 (
     set /a RM+=VP
 )
 if !VP! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [1/16] Products: !VP! >> "!CLOG!"
+echo [!time:~0,8!] Verify [1/17] Products: !VP! >> "!CLOG!"
 
 REM === 2. RUNNING PROCESSES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![2/16]!R! Processes..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![2/17]!R! Processes..."
 set PR=0
 set "PROC_TMP=!LOGDIR!\proc_check.tmp"
 type nul > "!PROC_TMP!"
@@ -4774,12 +4977,12 @@ if !PR! gtr 0 (
     set /a RM+=PR
 )
 if !PR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [2/16] Processes: !PR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [2/17] Processes: !PR! >> "!CLOG!"
 
 REM === 3. SERVICES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![3/16]!R! Services..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![3/17]!R! Services..."
 set SR=0
-for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
+for %%s in (AdskLicensingService AdskAccessServiceHost AdAppMgrSvc AdskNLM DesktopConnectorService "FlexNet Licensing Service 64" "Autodesk Genuine Service") do (
     sc query %%s >nul 2>&1
     if !errorlevel! equ 0 (
         set /a SR+=1
@@ -4791,10 +4994,10 @@ if !SR! gtr 0 (
     set /a RM+=SR
 )
 if !SR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [3/16] Services: !SR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [3/17] Services: !SR! >> "!CLOG!"
 
 REM === 4. PROGRAM FOLDERS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![4/16]!R! Program folders..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![4/17]!R! Program folders..."
 set FR=0
 for %%d in (
     "C:\Program Files\Autodesk"
@@ -4819,10 +5022,10 @@ if !FR! gtr 0 (
     set /a RM+=FR
 )
 if !FR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [4/16] Folders: !FR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [4/17] Folders: !FR! >> "!CLOG!"
 
 REM === 5. USER DATA FOLDERS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![5/16]!R! User data folders..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![5/17]!R! User data folders..."
 set UF=0
 for %%d in ("%APPDATA%\Autodesk" "%LOCALAPPDATA%\Autodesk" "%LOCALAPPDATA%\Programs\Autodesk" "%LOCALAPPDATA%\Temp\odis_download_dest") do (
     if exist "%%~d" (
@@ -4840,10 +5043,10 @@ if !UF! gtr 0 (
     set /a RM+=UF
 )
 if !UF! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [5/16] UserData: !UF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [5/17] UserData: !UF! >> "!CLOG!"
 
 REM === 6. AUTODESK REGISTRY HIVES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![6/16]!R! Registry hives..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![6/17]!R! Registry hives..."
 set RR=0
 for %%k in (
     "HKLM\SOFTWARE\Autodesk"
@@ -4866,10 +5069,10 @@ if !RR! gtr 0 (
     set /a RM+=RR
 )
 if !RR! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [6/16] RegHives: !RR! >> "!CLOG!"
+echo [!time:~0,8!] Verify [6/17] RegHives: !RR! >> "!CLOG!"
 
 REM === 7. REGISTRY DEEP SCAN - Autodesk-specific only ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![7/16]!R! Registry deep scan..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![7/17]!R! Registry deep scan..."
 set RD=0
 REM Check for Autodesk-specific HKCU class keys
 for /f "tokens=*" %%k in ('reg query "HKCU\SOFTWARE\Classes" /f "DWGTrueView" /k 2^>nul ^| findstr /i "HKEY_"') do (
@@ -4921,10 +5124,10 @@ if !RD! gtr 0 (
     set /a RM+=RD
 )
 if !RD! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [7/16] RegDeep: !RD! >> "!CLOG!"
+echo [!time:~0,8!] Verify [7/17] RegDeep: !RD! >> "!CLOG!"
 
 REM === 8. LEGACY LICENSING ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![8/16]!R! Legacy licensing..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![8/17]!R! Legacy licensing..."
 set LL=0
 if exist "C:\ProgramData\Autodesk\CLM" (
     set /a LL+=1
@@ -4946,10 +5149,10 @@ if !LL! gtr 0 (
     set /a RM+=LL
 )
 if !LL! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [8/16] Licensing: !LL! >> "!CLOG!"
+echo [!time:~0,8!] Verify [8/17] Licensing: !LL! >> "!CLOG!"
 
 REM === 9. ENV VARIABLES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![9/16]!R! Env variables..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![9/17]!R! Env variables..."
 set EV=0
 for %%v in (ADSKFLEX_LICENSE_FILE ADSK_LICENSE_FILE AUTODESK_LICENSE_FILE FLEXLM_TIMEOUT) do (
     reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager\Environment" /v "%%v" >nul 2>&1
@@ -4968,10 +5171,10 @@ if !EV! gtr 0 (
     set /a RM+=EV
 )
 if !EV! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [9/16] EnvVars: !EV! >> "!CLOG!"
+echo [!time:~0,8!] Verify [9/17] EnvVars: !EV! >> "!CLOG!"
 
 REM === 10. INSTALLER\PRODUCTS GHOSTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/16]!R! Installer\Products..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![10/17]!R! Installer\Products..."
 set IPV=0
 for /f "tokens=*" %%k in ('reg query "HKLM\SOFTWARE\Classes\Installer\Products" /s /v "ProductName" 2^>nul ^| findstr /i "HKEY_"') do (
     set "IP_MATCH=0"
@@ -4989,10 +5192,10 @@ if !IPV! gtr 0 (
     set /a RM+=IPV
 )
 if !IPV! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [10/16] InstallerProducts: !IPV! >> "!CLOG!"
+echo [!time:~0,8!] Verify [10/17] InstallerProducts: !IPV! >> "!CLOG!"
 
 REM === 11. SHORTCUTS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/16]!R! Shortcuts..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![11/17]!R! Shortcuts..."
 set SV=0
 for %%L in ("%USERPROFILE%\Desktop" "C:\Users\Public\Desktop") do (
     if exist "%%~L" (
@@ -5029,10 +5232,10 @@ if !SV! gtr 0 (
     set /a RM+=SV
 )
 if !SV! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [11/16] Shortcuts: !SV! >> "!CLOG!"
+echo [!time:~0,8!] Verify [11/17] Shortcuts: !SV! >> "!CLOG!"
 
 REM === 12. SCHEDULED TASKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/16]!R! Scheduled tasks..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![12/17]!R! Scheduled tasks..."
 set TK=0
 for /f "tokens=1 delims=," %%n in ('schtasks /query /fo csv /nh 2^>nul ^| findstr /i "Autodesk"') do (
     set /a TK+=1
@@ -5043,10 +5246,10 @@ if !TK! gtr 0 (
     set /a RM+=TK
 )
 if !TK! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [12/16] Tasks: !TK! >> "!CLOG!"
+echo [!time:~0,8!] Verify [12/17] Tasks: !TK! >> "!CLOG!"
 
 REM === 13. FIREWALL RULES ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/16]!R! Firewall rules..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![13/17]!R! Firewall rules..."
 set FW=0
 for /f "delims=" %%r in ('powershell -NoProfile -Command "(Get-NetFirewallRule -ErrorAction SilentlyContinue | Where-Object { $_.DisplayName -match 'Autodesk|AutoCAD|Revit|Inventor|Civil|Maya|3ds.?Max|Navisworks' }).DisplayName" 2^>nul') do (
     set /a FW+=1
@@ -5057,10 +5260,10 @@ if !FW! gtr 0 (
     set /a RM+=FW
 )
 if !FW! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [13/16] Firewall: !FW! >> "!CLOG!"
+echo [!time:~0,8!] Verify [13/17] Firewall: !FW! >> "!CLOG!"
 
 REM === 14. IFEO DEBUGGER BLOCKS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/16]!R! IFEO debugger blocks..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![14/17]!R! IFEO debugger blocks..."
 set IF=0
 set "IFEO_ROOT=HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\Image File Execution Options"
 for %%x in (!IFEO_EXES!) do (
@@ -5075,10 +5278,10 @@ if !IF! gtr 0 (
     set /a RM+=IF
 )
 if !IF! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [14/16] IFEO: !IF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [14/17] IFEO: !IF! >> "!CLOG!"
 
 REM === 15. PENDING FILE RENAME OPERATIONS ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/16]!R! PendingFileRename..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![15/17]!R! PendingFileRename..."
 set PF=0
 for /f "tokens=*" %%v in ('reg query "HKLM\SYSTEM\CurrentControlSet\Control\Session Manager" /v PendingFileRenameOperations 2^>nul ^| findstr /i "Autodesk"') do (
     set /a PF+=1
@@ -5099,10 +5302,10 @@ if !errorlevel! equ 0 (
     echo   REBOOT-FLAG: WindowsUpdate Orchestrator RebootRequired key exists >> "!VLOG!"
 )
 if !PF! gtr 0 set /a RM+=PF
-echo [!time:~0,8!] Verify [15/16] PFRO: !PF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [15/17] PFRO: !PF! >> "!CLOG!"
 
 REM === 16. HOSTS FILE ===
-<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![16/16]!R! Hosts file..."
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![16/17]!R! Hosts file..."
 set HF=0
 if exist "%WINDIR%\System32\drivers\etc\hosts" (
     for /f "tokens=*" %%h in ('findstr /i /v "^#" "%WINDIR%\System32\drivers\etc\hosts" 2^>nul ^| findstr /i "autodesk"') do (
@@ -5115,7 +5318,33 @@ if !HF! gtr 0 (
     set /a RM+=1
 )
 if !HF! equ 0 echo  !CGRN!CLEAN!R!
-echo [!time:~0,8!] Verify [16/16] Hosts: !HF! >> "!CLOG!"
+echo [!time:~0,8!] Verify [16/17] Hosts: !HF! >> "!CLOG!"
+
+REM === 17. DESKTOP CONNECTOR ===
+<nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![17/17]!R! Desktop Connector..."
+set DTC=0
+if exist "C:\Program Files\Autodesk\Desktop Connector" (
+    set /a DTC+=1
+    echo   DTC-FOLDER: C:\Program Files\Autodesk\Desktop Connector >> "!VLOG!"
+)
+sc query "DesktopConnectorService" >nul 2>&1
+if !errorlevel! equ 0 (
+    set /a DTC+=1
+    echo   DTC-SERVICE: DesktopConnectorService >> "!VLOG!"
+)
+if !DTC! gtr 0 (
+    echo  !CRED!!DTC! REMAINING!R!
+    set /a RM+=DTC
+)
+if !DTC! equ 0 echo  !CGRN!CLEAN!R!
+set DTC_WS=0
+if exist "%USERPROFILE%\DC\" set /a DTC_WS+=1
+if exist "%USERPROFILE%\ACCDocs\" set /a DTC_WS+=1
+if !DTC_WS! gtr 0 (
+    echo      !CYLW!Workspace folders present - user project data, not counted as remnants.!R!
+    echo   DTC-WORKSPACE: !DTC_WS! folder^(s^) present - user data, informational >> "!VLOG!"
+)
+echo [!time:~0,8!] Verify [17/17] DesktopConnector: !DTC! remnants, !DTC_WS! workspace >> "!CLOG!"
 
 REM === SUMMARY ===
 echo.
@@ -5141,6 +5370,8 @@ if !RM! gtr 0 (
 )
 echo  ========================================================
 echo.
+echo  !DIM!Started: !VF_START!  Completed: !time:~0,8!!R!
+echo [!time:~0,8!] Verify: Started !VF_START! Completed !time:~0,8! >> "!CLOG!"
 echo  Log and registry backups: !LOGDIR!
 echo [!time:~0,8!] Verify total: !RM! remaining >> "!CLOG!"
 echo. >> "!CLOG!"

@@ -1,5 +1,27 @@
 # Changelog
 
+## [v5.12] - 2026-07-05
+
+### Added — Desktop Connector Coverage & 2027 Readiness
+- **Desktop Connector remnant handling**: tray process (`DesktopConnector.Applications.Tray.exe`) and core service (`DesktopConnector.Core.Service.exe`) added to kill lists; `DesktopConnectorService` added to stop/delete lists across Full Clean Phase B, Deep Clean, remnant scan, audit, and verify
+- **Opt-in workspace cleanup**: new menu option **[9]** plus in-flow prompts in Full Clean and Deep Clean to remove the local Desktop Connector workspace (`%USERPROFILE%\DC`, `%USERPROFILE%\ACCDocs`), guarded by an explicit data-loss warning — the standalone option requires typing `YES`; in-flow prompts default to N
+- **2027 product line**: Revit / AutoCAD / Civil 3D / Inventor / Vault / InfraWorks / ReCap 2027 — detection is Publisher-based, verified against ODIS 2027 registration (no code change needed; banner and docs updated)
+- **17-point verification** (was 16): added a Desktop Connector check — leftover binaries/service count as remnants, while workspace folders are reported as user data and never counted
+- **Elapsed timing**: Deep Clean and Verify now print Started/Completed timestamps, captured after the prompts so operator think-time is excluded
+
+### Fixed
+- **Line endings (CRLF)**: the script now ships with CRLF endings so every menu option launches reliably — cmd.exe resolves `goto` by byte position and failed to reach labels deep in the previously LF-only file, which could prevent the remnant scan, audit, verification, and other deep-menu options from starting
+- **Workspace deletion data-loss guard** (CRITICAL): `DTC_ANS` is cleared before every workspace prompt — previously a stale `Y`/`YES` plus a bare Enter on a later run could delete the workspace with no confirmation
+- **Priority classification tokens**: addon and material-library detection converted to `/c:"exact phrase"` — bare words like "Service" / "Content" / "Library" no longer misclassify unrelated products
+- **Menu input**: pressing Enter with no choice no longer repeats the previous action; invalid input now shows feedback
+- **UAC relaunch quoting**: elevation passes the script path via an environment variable — no longer fails silently on paths containing apostrophes or ampersands
+- **Full Clean Phase B**: `DesktopConnectorService` is now stopped alongside the other services
+
+### Changed
+- **Deep Clean is strictly remnant-only**: no longer executes `AdskUninstallHelper.exe` (which could open an interactive wizard and hang); the Uninstallers folder is removed as a remnant during folder deletion
+- **Faster menu redraw**: the script SHA-256 is computed once per session instead of on every menu draw
+- **Remnant scan**: the Desktop Connector workspace is listed for visibility but excluded from the remnant count, matching audit and verify semantics
+
 ## [v5.11] - 2026-04-05
 
 ### Added — UX, Safety, and Localization
