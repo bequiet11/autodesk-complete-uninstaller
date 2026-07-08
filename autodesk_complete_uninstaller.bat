@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+set "SELFDIR=%~dp0"
 chcp 437 >nul 2>&1
 title Autodesk Universal Uninstaller v5.12
 
@@ -3007,13 +3008,20 @@ if !RS_DTCWS! gtr 0 (
 REM === 6. FULL C: DRIVE SEARCH ===
 <nul set /p "=  !DIM![!time:~0,8!]!R! !CWHT![ 6/15]!R! Full C: drive search........... "
 set RS_CDRIVE=0
+set RS_RECYCLE=0
 echo --- AUTODESK FOLDERS ANYWHERE ON C: --- >> "!SCANFILE!"
 echo  Searching C: drive for Autodesk folders... >> "!SCANFILE!"
-dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i /c:"Desktop\Autodesk_Uninstaller" /c:"\Downloads\Autodesk" /c:"\Downloads\AutoCAD" /c:"\Downloads\Revit" /c:"\Downloads\Maya" /c:"\Downloads\3ds" /c:"\Downloads\Inventor" /c:"\Downloads\Civil" /c:"\Downloads\Navisworks" /c:"\Downloads\DWG" > "!LOGDIR!\remnant_cdrive_tmp.txt"
+dir /s /b /ad "C:\*Autodesk*" 2>nul | findstr /v /i /c:"Desktop\Autodesk_Uninstaller" /c:"\Downloads\Autodesk" /c:"\Downloads\AutoCAD" /c:"\Downloads\Revit" /c:"\Downloads\Maya" /c:"\Downloads\3ds" /c:"\Downloads\Inventor" /c:"\Downloads\Civil" /c:"\Downloads\Navisworks" /c:"\Downloads\DWG" /c:"%SELFDIR%" > "!LOGDIR!\remnant_cdrive_tmp.txt"
 for /f "tokens=*" %%L in ('type "!LOGDIR!\remnant_cdrive_tmp.txt" 2^>nul') do (
-    set /a RS_CDRIVE+=1
-    <nul set /p "=!ESC![50G!DIM!scanning: !RS_CDRIVE!  !R!"
-    echo  %%L >> "!SCANFILE!"
+    echo "%%L" | findstr /i /c:"$Recycle.Bin" >nul 2>&1
+    if !errorlevel! equ 0 (
+        set /a RS_RECYCLE+=1
+        echo  RECYCLE-BIN ^(informational - already deleted, pending purge^): %%L >> "!SCANFILE!"
+    ) else (
+        set /a RS_CDRIVE+=1
+        <nul set /p "=!ESC![50G!DIM!scanning: !RS_CDRIVE!  !R!"
+        echo  %%L >> "!SCANFILE!"
+    )
 )
 del "!LOGDIR!\remnant_cdrive_tmp.txt" 2>nul
 echo. >> "!SCANFILE!"
@@ -3371,6 +3379,10 @@ echo.
 if !RS_GENERIC! gtr 0 (
     echo.
     echo   !DIM!+ !RS_GENERIC! GENERIC-ICON entries ^(informational only, not counted^)!R!
+)
+if !RS_RECYCLE! gtr 0 (
+    echo   !DIM!+ !RS_RECYCLE! Recycle Bin folders ^(informational only, not counted or deleted^)!R!
+    echo [!time:~0,8!] Scan: !RS_RECYCLE! Recycle Bin folders ^(informational^) >> "!CLOG!"
 )
 echo.
 echo [!time:~0,8!] Remnant scan total: !RS_TOTAL! >> "!CLOG!"
