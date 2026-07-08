@@ -1,6 +1,7 @@
 @echo off
 setlocal enabledelayedexpansion
 set "SELFDIR=%~dp0"
+set "SELFDIR=%SELFDIR:~0,-1%"
 chcp 437 >nul 2>&1
 title Autodesk Universal Uninstaller v5.12
 
