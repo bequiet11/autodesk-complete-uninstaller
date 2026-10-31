@@ -1,0 +1,20 @@
+<Application x:Class="AutodeskCleaner.App"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:c="clr-namespace:AutodeskCleaner.Converters"
+             ShutdownMode="OnExplicitShutdown">
+    <Application.Resources>
+        <ResourceDictionary>
+            <ResourceDictionary.MergedDictionaries>
+                <ResourceDictionary Source="Themes/Theme.xaml" />
+            </ResourceDictionary.MergedDictionaries>
+            <c:HexToBrushConverter x:Key="HexBrush" />
+            <c:BoolToVisibilityConverter x:Key="BoolToVis" />
+            <c:BoolToVisibilityConverter x:Key="InverseBoolToVis" />
+            <c:TextToVisibilityConverter x:Key="TextToVis" />
+            <c:NullToVisibilityConverter x:Key="NotNullVis" />
+            <c:InverseBoolConverter x:Key="InverseBool" />
+            <BooleanToVisibilityConverter x:Key="StdBoolToVis" />
+        </ResourceDictionary>
+    </Application.Resources>
+</Application>
