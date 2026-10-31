@@ -1,6 +1,7 @@
 using System.IO;
 using System.Text;
 using System.Windows;
+using AutodeskCleaner;
 using AutodeskCleaner.Localization;
 using AutodeskCleaner.Models;
 
@@ -84,6 +85,14 @@ public static class SelfTest
             Application.Current?.TryFindResource("PrimaryButton") is not null
             && Application.Current?.TryFindResource("CardBorder") is not null
             && Application.Current?.TryFindResource("SidebarNavRadio") is not null);
+
+        Check("Product dashboard can be constructed", () =>
+        {
+            var window = new MainWindow(new SettingsService());
+            var productTemplate = (DataTemplate)window.FindResource("ProductItemTemplate");
+            _ = productTemplate.LoadContent();
+            return true;
+        });
 
         Check("App icon resources are embedded", () =>
             Application.GetResourceStream(new Uri("pack://application:,,,/Assets/app.png")) is not null

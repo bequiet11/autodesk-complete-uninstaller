@@ -1,8 +1,10 @@
 using System.Collections.ObjectModel;
 using System.ComponentModel;
+using System.Diagnostics;
 using System.Linq;
 using System.Windows;
 using System.Windows.Data;
+using System.Windows.Media;
 using AutodeskCleaner.Localization;
 using AutodeskCleaner.Models;
 using AutodeskCleaner.Services;
@@ -19,6 +21,7 @@ public partial class MainWindow : Window
     private CancellationTokenSource? _activeCancellation;
     private string _searchText = string.Empty;
     private bool _isBusy;
+    private bool _showTools;
 
     public ICollectionView ProductsView => _viewSource.View;
 
@@ -33,6 +36,8 @@ public partial class MainWindow : Window
         _viewSource.Filter += OnFilterProducts;
         Loaded += MainWindow_Loaded;
         SearchBox.Text = string.Empty;
+        UpdateLanguageButton();
+        UpdateAdminStatus();
         UpdateSummary();
     }
 
@@ -50,11 +55,21 @@ public partial class MainWindow : Window
     {
         _searchText = SearchBox.Text ?? string.Empty;
         _viewSource.View.Refresh();
+        UpdateProductListState();
     }
 
     private void OnFilterProducts(object sender, FilterEventArgs e)
     {
         var product = (AutodeskProduct)e.Item;
+        var filter = FilterBox.SelectedIndex;
+        if (filter == 1 && !product.IsOrphan
+            || filter == 2 && product.Method != InstallMethod.Odis
+            || filter == 3 && product.Method != InstallMethod.Msi)
+        {
+            e.Accepted = false;
+            return;
+        }
+
         if (string.IsNullOrWhiteSpace(_searchText))
         {
             e.Accepted = true;
@@ -92,8 +107,19 @@ public partial class MainWindow : Window
         RemnantsText.Text = orphanCount.ToString();
         LastScanText.Text = DateTime.Now.ToString("dd MMM yyyy");
 
-        EmptyState.Visibility = count == 0 ? Visibility.Visible : Visibility.Collapsed;
-        ProductList.Visibility = count == 0 ? Visibility.Collapsed : Visibility.Visible;
+        UpdateSelectionSummary();
+        UpdateProductListState();
+    }
+
+    private void UpdateProductListState()
+    {
+        var visibleCount = _viewSource.View?.Cast<object>().Count() ?? 0;
+        var noProducts = _products.Count == 0;
+        EmptyState.Visibility = visibleCount == 0 ? Visibility.Visible : Visibility.Collapsed;
+        ProductItems.Visibility = visibleCount == 0 ? Visibility.Collapsed : Visibility.Visible;
+        EmptyTitleText.Text = Loc.Instance[noProducts ? "Empty_Title" : "Empty_Search_Title"];
+        EmptyBodyText.Text = Loc.Instance[noProducts ? "Empty_Body" : "Empty_Search_Body"];
+        FilteredCountText.Text = visibleCount.ToString();
     }
 
     private static string FormatSize(long bytes)
@@ -109,7 +135,7 @@ public partial class MainWindow : Window
 
     private async void UninstallSelected_Click(object sender, RoutedEventArgs e)
     {
-        var selected = ProductList.SelectedItems.Cast<AutodeskProduct>()
+        var selected = _products.Where(product => product.IsSelected)
             .OrderBy(product => product.Priority)
             .ThenBy(product => product.DisplayName, StringComparer.CurrentCultureIgnoreCase)
             .ToList();
@@ -187,6 +213,171 @@ public partial class MainWindow : Window
         }
     }
 
+    private void ProductsNav_Click(object sender, RoutedEventArgs e) => ShowPage(tools: false);
+
+    private void ToolsNav_Click(object sender, RoutedEventArgs e) => ShowPage(tools: true);
+
+    private void ShowPage(bool tools)
+    {
+        _showTools = tools;
+        ProductsPage.Visibility = tools ? Visibility.Collapsed : Visibility.Visible;
+        ToolsPage.Visibility = tools ? Visibility.Visible : Visibility.Collapsed;
+        PageTitleText.Text = Loc.Instance[tools ? "Tools_Title" : "Products_Title"];
+        PageSubtitleText.Text = Loc.Instance[tools ? "Tools_Subtitle" : "Products_Subtitle"];
+
+        ProductsNavButton.Background = FindResource(tools ? "SidebarBrush" : "SidebarActiveBrush") as Brush;
+        ProductsNavButton.Foreground = FindResource("SidebarTextBrush") as Brush;
+        ToolsNavButton.Background = FindResource(tools ? "SidebarActiveBrush" : "SidebarBrush") as Brush;
+        ToolsNavButton.Foreground = FindResource("SidebarTextBrush") as Brush;
+
+        RescanButton.Visibility = tools ? Visibility.Collapsed : Visibility.Visible;
+        UninstallSelectedButton.Visibility = tools ? Visibility.Collapsed : Visibility.Visible;
+    }
+
+    private void ProductSelectionChanged(object sender, RoutedEventArgs e) => UpdateSelectionSummary();
+
+    private void FilterBox_SelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (_viewSource.Source is not null)
+        {
+            _viewSource.View.Refresh();
+            UpdateProductListState();
+        }
+    }
+
+    private void SelectAll_Click(object sender, RoutedEventArgs e)
+    {
+        var visibleProducts = _viewSource.View.Cast<AutodeskProduct>().ToList();
+        var select = visibleProducts.Any(product => !product.IsSelected);
+        foreach (var product in visibleProducts)
+        {
+            product.IsSelected = select;
+        }
+
+        UpdateSelectionSummary();
+    }
+
+    private void UpdateSelectionSummary()
+    {
+        if (SelectedCountText is null)
+        {
+            return;
+        }
+
+        var selected = _products.Count(product => product.IsSelected);
+        SelectedCountText.Text = Loc.Instance.Format("SelectedCount", selected);
+        var visibleProducts = _viewSource.View.Cast<AutodeskProduct>().ToList();
+        SelectAllButton.Content = Loc.Instance[visibleProducts.Count > 0 && visibleProducts.All(product => product.IsSelected)
+            ? "DeselectAll"
+            : "SelectAll"];
+        UninstallSelectedButton.IsEnabled = !_isBusy && selected > 0;
+    }
+
+    private void Language_Click(object sender, RoutedEventArgs e)
+    {
+        Loc.Instance.SetLanguage(Loc.Instance.IsEnglish ? "id" : "en");
+        _settings.Language = Loc.Instance.Language;
+        _settings.Save();
+        UpdateLanguageButton();
+        UpdateAdminStatus();
+        UpdateSummary();
+        ShowPage(_showTools);
+    }
+
+    private void UpdateLanguageButton()
+    {
+        LanguageButton.Content = Loc.Instance.IsEnglish ? "ID" : "EN";
+        LanguageButton.ToolTip = Loc.Instance["Language_Switch_Tooltip"];
+        Title = Loc.Instance["Window_Title"];
+    }
+
+    private void UpdateAdminStatus()
+    {
+        AdminStatusText.Text = AdminHelper.IsAdministrator
+            ? Loc.Instance["Sidebar_Admin"]
+            : Loc.Instance["Sidebar_AdminNo"];
+    }
+
+    private async void Audit_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Audit);
+
+    private async void Verify_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Verify);
+
+    private async void Remnants_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Remnants);
+
+    private async void Restore_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Restore);
+
+    private async void Error103_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Error103);
+
+    private async void Reboot_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Reboot);
+
+    private async void Backup_Click(object sender, RoutedEventArgs e)
+        => await RunToolWithConfirmationAsync(EngineAction.Backup);
+
+    private void OpenLogs_Click(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            Process.Start(new ProcessStartInfo
+            {
+                FileName = AppPaths.EngineLogDir,
+                UseShellExecute = true,
+            });
+        }
+        catch (Exception ex)
+        {
+            MessageBox.Show(this, Loc.Instance.Format("Error_OpenFolder", ex.Message),
+                Loc.Instance["Error_Title"], MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private async Task RunToolWithConfirmationAsync(EngineAction action)
+    {
+        var (titleKey, descriptionKey, warningKey) = action switch
+        {
+            EngineAction.Audit => ("Confirm_Audit_Title", "Confirm_Audit_Desc", (string?)null),
+            EngineAction.Verify => ("Confirm_Verify_Title", "Confirm_Verify_Desc", (string?)null),
+            EngineAction.Remnants => ("Confirm_Remnants_Title", "Confirm_Remnants_Desc", (string?)null),
+            EngineAction.Restore => ("Confirm_Restore_Title", "Confirm_Restore_Desc", (string?)null),
+            EngineAction.Error103 => ("Confirm_Error103_Title", "Confirm_Error103_Desc", "Confirm_Error103_Warning"),
+            EngineAction.Reboot => ("Confirm_Reboot_Title", "Confirm_Reboot_Desc", (string?)null),
+            EngineAction.Backup => ("Confirm_Backup_Title", "Confirm_Backup_Desc", (string?)null),
+            _ => throw new ArgumentOutOfRangeException(nameof(action), action, "Unsupported tool action."),
+        };
+
+        var message = Loc.Instance[descriptionKey];
+        if (warningKey is not null)
+        {
+            message += Environment.NewLine + Environment.NewLine + Loc.Instance[warningKey];
+        }
+
+        if (MessageBox.Show(this, message, Loc.Instance[titleKey], MessageBoxButton.YesNo,
+                action is EngineAction.Error103 or EngineAction.Reboot ? MessageBoxImage.Warning : MessageBoxImage.Information,
+                MessageBoxResult.No) != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        var statusKey = action switch
+        {
+            EngineAction.Audit => "Tool_Audit_Title",
+            EngineAction.Verify => "Verify",
+            EngineAction.Remnants => "Tool_Remnants_Title",
+            EngineAction.Restore => "Tool_Restore_Title",
+            EngineAction.Error103 => "Tool_Error103_Title",
+            EngineAction.Reboot => "Tool_Reboot_Title",
+            EngineAction.Backup => "Tool_Backup_Title",
+            _ => "Activity_Starting",
+        };
+
+        await RunEngineActionAsync(action, Loc.Instance[statusKey]);
+    }
+
     private async Task RunEngineActionAsync(EngineAction action, string status)
     {
         if (_isBusy)
@@ -223,6 +414,13 @@ public partial class MainWindow : Window
                 {
                     EngineAction.Full => "Result_FullClean",
                     EngineAction.Deep => "Result_DeepClean",
+                    EngineAction.Verify => "Result_Verify",
+                    EngineAction.Audit => "Result_Audit",
+                    EngineAction.Remnants => "Result_Remnants",
+                    EngineAction.Restore => "Result_Restore",
+                    EngineAction.Error103 => "Result_Error103",
+                    EngineAction.Reboot => "Result_Reboot",
+                    EngineAction.Backup => "Result_Backup",
                     _ => "Result_Scan",
                 };
                 AppendLog($"{Loc.Instance[resultKey]} ({result.Elapsed:mm\\:ss})");
@@ -277,6 +475,22 @@ public partial class MainWindow : Window
                 environment["DC_RP"] = _settings.DefaultCreateRestorePoint ? yes : no;
                 environment["DEL_FLEX"] = no;
                 break;
+            case EngineAction.Restore:
+                environment["RP_CONF"] = yes;
+                environment["SR_ENABLE"] = no;
+                break;
+            case EngineAction.Backup:
+                environment["BK_GO"] = yes;
+                break;
+            case EngineAction.Error103:
+                environment["E103_R1"] = no;
+                environment["E103_R2"] = no;
+                environment["E103_R3"] = no;
+                environment["E103_R4"] = no;
+                environment["E103_R5"] = no;
+                environment["E103_R10"] = no;
+                environment["E103_RBOOT"] = no;
+                break;
         }
 
         return environment;
@@ -304,8 +518,7 @@ public partial class MainWindow : Window
         StopButton.Visibility = Visibility.Visible;
         RescanButton.IsEnabled = false;
         UninstallSelectedButton.IsEnabled = false;
-        FullCleanButton.IsEnabled = false;
-        DeepCleanButton.IsEnabled = false;
+        SelectAllButton.IsEnabled = false;
     }
 
     private void EndAction()
@@ -316,8 +529,8 @@ public partial class MainWindow : Window
         StopButton.Visibility = Visibility.Collapsed;
         RescanButton.IsEnabled = true;
         UninstallSelectedButton.IsEnabled = true;
-        FullCleanButton.IsEnabled = true;
-        DeepCleanButton.IsEnabled = true;
+        SelectAllButton.IsEnabled = true;
+        UpdateSelectionSummary();
     }
 
     private void Stop_Click(object sender, RoutedEventArgs e)
