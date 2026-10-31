@@ -24,3 +24,5 @@ test_*.bat
 test_*.txt
 run_*.ps1
 *.ps1
+**/bin/
+**/obj/

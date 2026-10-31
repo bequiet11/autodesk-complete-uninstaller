@@ -1,5 +1,6 @@
 @echo off
 setlocal enabledelayedexpansion
+if not defined ADSK_GUI_PID set "ADSK_GUI_PID=0"
 set "SELFDIR=%~dp0"
 set "SELFDIR=%SELFDIR:~0,-1%"
 chcp 437 >nul 2>&1
@@ -140,7 +141,38 @@ set PROD_COUNT=0
 REM Detect Windows version for compatibility info
 for /f "tokens=4-5 delims=. " %%i in ('ver') do set "WINVER=%%i.%%j"
 
+REM ============================================================
+REM GUI HEADLESS DISPATCHER (added for the Autodesk Cleaner GUI)
+REM The desktop app sets ADSK_GUI_MODE=1 plus pre-answered variables,
+REM so no prompt can block. Interactive use is unchanged.
+REM ============================================================
+:gui_bootstrap
+if not defined ADSK_GUI_MODE goto :main_menu
+if not defined ADSK_GUI_ACTION set "ADSK_GUI_ACTION=scan"
+echo. >> "!CLOG!"
+echo ======================================================== >> "!CLOG!"
+echo  GUI ACTION: !ADSK_GUI_ACTION! >> "!CLOG!"
+echo ======================================================== >> "!CLOG!"
+call :scan_products
+if /i "!ADSK_GUI_ACTION!"=="scan" exit /b 0
+if /i "!ADSK_GUI_ACTION!"=="full" goto :full_clean
+if /i "!ADSK_GUI_ACTION!"=="deep" goto :deep_clean
+if /i "!ADSK_GUI_ACTION!"=="verify" goto :run_verify
+if /i "!ADSK_GUI_ACTION!"=="audit" goto :full_audit
+if /i "!ADSK_GUI_ACTION!"=="remnants" goto :search_remnants
+if /i "!ADSK_GUI_ACTION!"=="restore" goto :create_restore
+if /i "!ADSK_GUI_ACTION!"=="error103" goto :fix_error103
+if /i "!ADSK_GUI_ACTION!"=="reboot" goto :fix_reboot_pending
+if /i "!ADSK_GUI_ACTION!"=="backup" goto :backup_templates
+if /i "!ADSK_GUI_ACTION!"=="dtc" goto :dtc_workspace
+echo  Unknown GUI action: !ADSK_GUI_ACTION! >> "!CLOG!"
+exit /b 2
+
 :main_menu
+if defined ADSK_GUI_MODE (
+    echo [%date% %time%] GUI ACTION COMPLETE >> "!CLOG!"
+    exit /b 0
+)
 cls
 echo.
 echo  !CCYN!============================================================!R!
@@ -180,7 +212,7 @@ echo  !DIM!Diagnostics: !LOGDIR!\diagnostics.log!R!
 echo  !DIM!Console log: !CLOG!!R!
 echo.
 set "MC="
-set /p "MC=  !CWHT!Enter choice [0-12]:!R! "
+if not defined ADSK_GUI_MODE set /p "MC=  !CWHT!Enter choice [0-12]:!R! "
 echo [%date% %time%] Menu choice: !MC! >> "!CLOG!"
 if "!MC!"=="1" goto :scan_products
 if "!MC!"=="2" goto :uninstall_selected
@@ -197,7 +229,7 @@ if "!MC!"=="12" goto :backup_templates
 if "!MC!"=="0" exit /b 0
 echo.
 echo  !CYLW!Invalid choice - please enter one of the numbers shown.!R!
-timeout /t 2 /nobreak >nul
+call :GUI_WAIT 2 /nobreak
 goto :main_menu
 
 REM ============================================================
@@ -216,7 +248,7 @@ echo.
 echo  NOTE: Windows limits restore points to one per 24 hours.
 echo        This script will temporarily bypass that limit.
 echo.
-set /p "RP_CONF=  Create restore point now? [Y/N]: "
+if not defined ADSK_GUI_MODE set /p "RP_CONF=  Create restore point now? [Y/N]: "
 if /i not "!RP_CONF!"=="Y" goto :main_menu
 echo. >> "!CLOG!"
 echo ======================================================== >> "!CLOG!"
@@ -240,9 +272,9 @@ echo  System Restore is disabled on this machine.
 echo  To enable it: System Properties - System Protection -
 echo  Configure - Turn on system protection.
 echo.
-set /p "SR_ENABLE=  Try to enable it now? [Y/N]: "
+if not defined ADSK_GUI_MODE set /p "SR_ENABLE=  Try to enable it now? [Y/N]: "
 if /i not "!SR_ENABLE!"=="Y" (
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 <nul set /p "=  Enabling System Restore on C:..."
@@ -252,7 +284,7 @@ if !errorlevel! equ 0 (
 )
 if !errorlevel! neq 0 (
     echo  FAILED - enable manually via System Properties.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 
@@ -291,7 +323,7 @@ echo.
 echo  You can still continue with uninstallation.
 echo.
 reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v SystemRestorePointCreationFrequency /f >nul 2>&1
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 :cr_wmic_ok
@@ -302,7 +334,7 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v 
 echo.
 echo  Restore point created successfully.
 echo.
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 :cr_ps_ok
@@ -313,7 +345,7 @@ reg delete "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SystemRestore" /v 
 echo.
 echo  Restore point created successfully.
 echo.
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -484,7 +516,8 @@ echo ======================================================== >> "!CLOG!"
 if !PROD_COUNT! equ 0 (
     echo  !CYLW!No Autodesk products detected.!R!
     echo.
-    pause
+    call :GUI_PAUSE
+    if defined ADSK_GUI_MODE exit /b 0
     goto :main_menu
 )
 
@@ -522,7 +555,8 @@ for /l %%i in (1,1,!PROD_COUNT!) do (
     echo   [%%i] P!P_PRIO_%%i! !P_TYPE_%%i! !P_NAME_%%i! >> "!LOGFILE!"
     echo   UNINST: !P_UNINST_%%i! >> "!LOGFILE!"
 )
-pause
+call :GUI_PAUSE
+if defined ADSK_GUI_MODE exit /b 0
 goto :main_menu
 
 REM ============================================================
@@ -534,7 +568,7 @@ if !PROD_COUNT! equ 0 (
     echo.
     echo  No products scanned yet. Run option [1] first.
     echo.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 echo.
@@ -548,7 +582,7 @@ for /l %%i in (1,1,!PROD_COUNT!) do (
 echo.
 echo  Enter numbers separated by spaces, or 0 to go back.
 echo.
-set /p "SEL=  Selection: "
+if not defined ADSK_GUI_MODE set /p "SEL=  Selection: "
 if "!SEL!"=="0" goto :main_menu
 
 echo.
@@ -561,7 +595,7 @@ for %%n in (!SEL!) do (
         echo  --------------------------------------------------------
         echo   [!PTYPE!] !PNAME!
         echo  --------------------------------------------------------
-        set /p "CONF=  Proceed? [Y/N]: "
+        if not defined ADSK_GUI_MODE set /p "CONF=  Proceed? [Y/N]: "
         set "_HANDLED=0"
         if /i not "!CONF!"=="Y" set "_HANDLED=1"
 
@@ -627,7 +661,7 @@ for %%n in (!SEL!) do (
 )
 
 echo  Done. Run [1] to rescan, or [4] for deep clean.
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -639,7 +673,7 @@ if !PROD_COUNT! equ 0 (
     echo.
     echo  No products scanned yet. Run option [1] first.
     echo.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 echo.
@@ -667,10 +701,10 @@ echo    Phase J: Final verification
 echo.
 echo  !CRED!!BOLD!WARNING: IRREVERSIBLE. Back up custom templates first.!R!
 echo.
-set /p "FC_CONF=  Type YES to proceed: "
+if not defined ADSK_GUI_MODE set /p "FC_CONF=  Type YES to proceed: "
 if /i not "!FC_CONF!"=="YES" (
     echo  Aborted.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 echo.
@@ -690,7 +724,7 @@ if !INSTALLER_FOUND! equ 1 (
     echo  !CYLW!============================================================!R!
     echo      !CYLW!Tip: Most users choose N here - you will need these files!R!
     echo      !CYLW!if you plan to reinstall Autodesk products.!R!
-    set /p "FC_INST=  Also remove installer files from Downloads? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "FC_INST=  Also remove installer files from Downloads? [Y/N]: "
     if /i "!FC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
@@ -709,8 +743,8 @@ if !DTC_WS_FOUND! equ 1 (
     echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
     echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
     echo      !CYLW!Tip: Most users choose N here.!R!
-    set "DTC_ANS="
-    set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
+    if not defined ADSK_GUI_MODE set "DTC_ANS="
+    if not defined ADSK_GUI_MODE set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
     if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
 )
 
@@ -726,7 +760,7 @@ REM --- Phase A: Restore point ---
 echo  !DIM![!time:~0,8!]!R! !CCYN!!BOLD![A]!R! !CWHT!System Restore Point!R!
 echo      !CCYN!Tip: A restore point is optional. The tool creates!R!
 echo      !CCYN!registry backups automatically.!R!
-set /p "RP_ASK=      Create restore point before proceeding? [Y/N]: "
+if not defined ADSK_GUI_MODE set /p "RP_ASK=      Create restore point before proceeding? [Y/N]: "
 if /i not "!RP_ASK!"=="Y" goto :fc_phase_b
 
 <nul set /p "=      Creating restore point..."
@@ -773,7 +807,7 @@ if !HAS_USERDATA! equ 1 (
     if exist "C:\Users\Public\Documents\Autodesk" echo    !DIM!C:\Users\Public\Documents\Autodesk!R!
     echo.
     <nul set /p "=  Back up custom templates and settings before cleanup? [Y/N]: "
-    set /p "BACKUP_CHOICE="
+    if not defined ADSK_GUI_MODE set /p "BACKUP_CHOICE="
 )
 if !HAS_USERDATA! equ 0 (
     echo.
@@ -847,12 +881,12 @@ for %%p in (!KILL_PROCS!) do (
     if !errorlevel! equ 0 <nul set /p "=."
 )
 REM Wildcard: kill ANY process running from Autodesk paths
-wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
-wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
-powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+wmic process where "ExecutablePath like '%%Autodesk%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+wmic process where "ExecutablePath like '%%AdODIS%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Id -ne [int]$env:ADSK_GUI_PID -and $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 echo  !CGRN!done.!R!
 echo [!time:~0,8!] Phase B: services stopped, processes killed >> "!CLOG!"
-timeout /t 2 >nul
+call :GUI_WAIT 2
 echo.
 
 echo  !DIM![!time:~0,8!]!R! !CCYN!Progress: !CGRN!=====!R!!DIM!===============!R! !CWHT!Phase C - 3 of 12!R!
@@ -1140,7 +1174,7 @@ set PREV_REMAIN=!REMAIN!
 
 echo.
 echo      !REMAIN! products still registered. Waiting 5 seconds...
-timeout /t 5 >nul
+call :GUI_WAIT 5
 set /a PASS_NUM=RETRY_NUM+1
 echo.
 echo  !CYLW!Some products need a second attempt - this is normal.!R!
@@ -1389,26 +1423,26 @@ if exist "C:\Program Files (x86)\Autodesk\Autodesk Desktop App\removeAdAppMgr.ex
     <nul set /p "=      Desktop App... !DIM!^(please wait^)!R!"
     rd /s /q "%ProgramData%\Autodesk\SDS" 2>nul
     start /wait "" "C:\Program Files (x86)\Autodesk\Autodesk Desktop App\removeAdAppMgr.exe" --mode unattended
-    timeout /t 3 >nul
+    call :GUI_WAIT 3
     echo  !CGRN!OK!R!
 )
 if exist "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe" (
     <nul set /p "=      Identity Manager... !DIM!^(please wait^)!R!"
     start /wait "" "C:\Program Files\Autodesk\AdskIdentityManager\uninstall.exe" --mode unattended
-    timeout /t 3 >nul
+    call :GUI_WAIT 3
     echo  !CGRN!OK!R!
 )
 if exist "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" (
     del /f "C:\ProgramData\Autodesk\ODIS\AdODISInstaller.run.lock" >nul 2>&1
     <nul set /p "=      RemoveODIS... !DIM!^(please wait^)!R!"
     start /wait "" "C:\Program Files\Autodesk\AdODIS\V1\RemoveODIS.exe" --mode unattended
-    timeout /t 3 >nul
+    call :GUI_WAIT 3
     echo  !CGRN!OK!R!
 )
 if exist "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" (
     <nul set /p "=      AdskLicensing... !DIM!^(please wait^)!R!"
     start /wait "" "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" --mode unattended
-    timeout /t 3 >nul
+    call :GUI_WAIT 3
     echo  !CGRN!OK!R!
 )
 if not exist "C:\Program Files (x86)\Common Files\Autodesk Shared\AdskLicensing\uninstall.exe" (
@@ -1449,9 +1483,9 @@ for %%p in (!KILL_PROCS!) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
-wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
-wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
-powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+wmic process where "ExecutablePath like '%%Autodesk%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+wmic process where "ExecutablePath like '%%AdODIS%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Id -ne [int]$env:ADSK_GUI_PID -and $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 REM Stop Windows Search to release index handles on Autodesk folders
 net stop msiserver >nul 2>&1
 net stop WSearch >nul 2>&1
@@ -1472,12 +1506,12 @@ for %%x in (
 if !EXPLORER_KILLED! equ 1 (
     <nul set /p "= restarting explorer"
     taskkill /f /im explorer.exe >nul 2>&1
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
     start "" explorer.exe
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
 )
 echo  !CGRN!done.!R!
-timeout /t 3 >nul
+call :GUI_WAIT 3
 echo  !DIM![!time:~0,8!]!R! !CCYN!!BOLD![E]!R! !CWHT!Deleting Autodesk folders...!R!
 echo  !DIM!Removing folders - large installations may take a moment...!R!
 echo  PHASE E START %time% >> "!DIAGFILE!"
@@ -1774,7 +1808,7 @@ sc query "FlexNet Licensing Service 64" >nul 2>&1
 if !errorlevel! equ 0 (
     echo      [WARN] FlexNet Licensing Service 64 found.
     echo             Shared with Adobe. Type N if you use Adobe.
-    set /p "DEL_FLEX=      Delete FlexNet service? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "DEL_FLEX=      Delete FlexNet service? [Y/N]: "
     if /i "!DEL_FLEX!"=="Y" (
         sc delete "FlexNet Licensing Service 64" >nul 2>&1
         echo      [DELETED] FlexNet Licensing Service 64
@@ -2027,17 +2061,17 @@ if defined LOCKED_LIST (
     for %%p in (!KILL_PROCS!) do (
         taskkill /f /im "%%p" >nul 2>&1
     )
-    wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
-    wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
-    powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+    wmic process where "ExecutablePath like '%%Autodesk%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+    wmic process where "ExecutablePath like '%%AdODIS%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+    powershell -NoProfile -Command "Get-Process | Where-Object { $_.Id -ne [int]$env:ADSK_GUI_PID -and $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
     net stop WSearch >nul 2>&1
     net stop msiserver >nul 2>&1
     REM Kill explorer to release shell extension handles on backup files
     taskkill /f /im explorer.exe >nul 2>&1
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
     start "" explorer.exe
-    timeout /t 2 >nul
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
+    call :GUI_WAIT 2
     REM Delete files first, then remove empty dirs
     for %%d in (!LOCKED_LIST!) do (
         if exist "%%~d" (
@@ -2105,7 +2139,7 @@ echo [!time:~0,8!] Full Clean: Started !FC_START! Completed !time:~0,8! >> "!CLO
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
-pause
+call :GUI_PAUSE
 goto :run_verify
 
 REM ============================================================
@@ -2122,10 +2156,10 @@ echo.
 echo  Skips product uninstallation, removes all remnants:
 echo    Components, folders, caches, registry, services, etc.
 echo.
-set /p "DC_CONF=  Type YES to proceed: "
+if not defined ADSK_GUI_MODE set /p "DC_CONF=  Type YES to proceed: "
 if /i not "!DC_CONF!"=="YES" (
     echo  Aborted.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 echo. >> "!CLOG!"
@@ -2147,7 +2181,7 @@ if !INSTALLER_FOUND! equ 1 (
     echo  !CYLW!============================================================!R!
     echo      !CYLW!Tip: Most users choose N here - you will need these files!R!
     echo      !CYLW!if you plan to reinstall Autodesk products.!R!
-    set /p "DC_INST=  Also remove installer files from Downloads? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "DC_INST=  Also remove installer files from Downloads? [Y/N]: "
     if /i "!DC_INST!"=="Y" set "CLEAN_INSTALLERS=1"
 )
 
@@ -2166,8 +2200,8 @@ if !DTC_WS_FOUND! equ 1 (
     echo      !CRED!WARNING: files not fully uploaded to the Autodesk cloud!R!
     echo      !CRED!will be PERMANENTLY LOST if you choose Y.!R!
     echo      !CYLW!Tip: Most users choose N here.!R!
-    set "DTC_ANS="
-    set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
+    if not defined ADSK_GUI_MODE set "DTC_ANS="
+    if not defined ADSK_GUI_MODE set /p "DTC_ANS=  Also delete Desktop Connector workspace folders? [Y/N]: "
     if /i "!DTC_ANS!"=="Y" set "DTC_CLEAN_WS=1"
 )
 set "DCL_START=!time:~0,8!"
@@ -2176,7 +2210,7 @@ echo.
 REM Offer restore point
 echo      !CCYN!Tip: A restore point is optional. The tool creates!R!
 echo      !CCYN!registry backups automatically.!R!
-set /p "DC_RP=  Create restore point first? [Y/N]: "
+if not defined ADSK_GUI_MODE set /p "DC_RP=  Create restore point first? [Y/N]: "
 if /i not "!DC_RP!"=="Y" goto :dc_after_rp
 
 <nul set /p "=  Creating restore point..."
@@ -2220,12 +2254,12 @@ for %%p in (!KILL_PROCS!) do (
     taskkill /f /im "%%p" >nul 2>&1
     if !errorlevel! equ 0 <nul set /p "=."
 )
-wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
-wmic process where "ExecutablePath like '%%AdODIS%%'" call terminate >nul 2>&1
-powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+wmic process where "ExecutablePath like '%%Autodesk%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+wmic process where "ExecutablePath like '%%AdODIS%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Id -ne [int]$env:ADSK_GUI_PID -and $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 net stop WSearch >nul 2>&1
 echo  !CGRN!done.!R!
-timeout /t 2 >nul
+call :GUI_WAIT 2
 
 echo.
 echo  Running component uninstallers...
@@ -2302,8 +2336,8 @@ REM Kill again before folder deletion - component uninstallers may have spawned 
 for %%p in (AdskAccessService.exe AdskAccessCore.exe AdskAccessServiceHost.exe Installer.exe AdODIS.exe DesktopConnector.Applications.Tray.exe DesktopConnector.Core.Service.exe) do (
     taskkill /f /im "%%p" >nul 2>&1
 )
-wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
-powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+wmic process where "ExecutablePath like '%%Autodesk%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+powershell -NoProfile -Command "Get-Process | Where-Object { $_.Id -ne [int]$env:ADSK_GUI_PID -and $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
 net stop msiserver >nul 2>&1
 net stop WSearch >nul 2>&1
 REM Unregister shell extensions loaded by explorer.exe
@@ -2322,12 +2356,12 @@ for %%x in (
 if !DC_EXPLORER! equ 1 (
     <nul set /p "= restarting explorer"
     taskkill /f /im explorer.exe >nul 2>&1
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
     start "" explorer.exe
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
 )
 echo  !CGRN!done.!R!
-timeout /t 3 >nul
+call :GUI_WAIT 3
 set "DC_LOCKED="
 echo [!time:~0,8!] Deep Clean: deleting folders >> "!CLOG!"
 echo  !DIM![!time:~0,8!]!R! Deleting folders...
@@ -2719,16 +2753,16 @@ if defined DC_LOCKED (
     for %%p in (!KILL_PROCS!) do (
         taskkill /f /im "%%p" >nul 2>&1
     )
-    wmic process where "ExecutablePath like '%%Autodesk%%'" call terminate >nul 2>&1
-    powershell -NoProfile -Command "Get-Process | Where-Object { $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
+    wmic process where "ExecutablePath like '%%Autodesk%%' and ProcessId <> !ADSK_GUI_PID!" call terminate >nul 2>&1
+    powershell -NoProfile -Command "Get-Process | Where-Object { $_.Id -ne [int]$env:ADSK_GUI_PID -and $_.Path -match 'Autodesk|AdODIS|Adsk' } | Stop-Process -Force -ErrorAction SilentlyContinue" >nul 2>&1
     net stop WSearch >nul 2>&1
     net stop msiserver >nul 2>&1
     REM Kill explorer to release shell extension handles on backup files
     taskkill /f /im explorer.exe >nul 2>&1
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
     start "" explorer.exe
-    timeout /t 2 >nul
-    timeout /t 2 >nul
+    call :GUI_WAIT 2
+    call :GUI_WAIT 2
     REM Delete files first, then remove empty dirs
     for %%d in (!DC_LOCKED!) do (
         if exist "%%~d" (
@@ -2837,7 +2871,7 @@ echo  !CCYN!System is ready for fresh Autodesk installation.!R!
 echo  !DIM!If the new installer shows "restart pending", reboot once first.!R!
 echo  !DIM!This is a Windows requirement after system cleanup, not an incomplete uninstall.!R!
 echo.
-pause
+call :GUI_PAUSE
 goto :run_verify
 
 REM ============================================================
@@ -3398,7 +3432,7 @@ echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -4073,7 +4107,7 @@ echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -4114,19 +4148,19 @@ if !DTC_WS_FOUND! equ 0 (
     echo  !CGRN!No Desktop Connector workspace found - nothing to clean.!R!
     echo [!time:~0,8!] DTC workspace: none found >> "!CLOG!"
     echo.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 echo.
 echo  !CRED!WARNING: these folders hold your project files. Anything not!R!
 echo  !CRED!fully uploaded to the Autodesk cloud is PERMANENTLY LOST.!R!
 echo.
-set "DTC_ANS="
-set /p "DTC_ANS=  Type YES to delete !DTC_FC! files in the folders above: "
+if not defined ADSK_GUI_MODE set "DTC_ANS="
+if not defined ADSK_GUI_MODE set /p "DTC_ANS=  Type YES to delete !DTC_FC! files in the folders above: "
 if /i not "!DTC_ANS!"=="YES" (
     echo  Aborted - nothing deleted.
     echo [!time:~0,8!] DTC workspace: aborted by user >> "!CLOG!"
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 taskkill /f /im "DesktopConnector.Applications.Tray.exe" >nul 2>&1
@@ -4149,7 +4183,7 @@ echo  !CGRN!!DTC_DEL! workspace folder^(s^) removed.!R!
 echo [!time:~0,8!] DTC workspace: !DTC_DEL! folders removed >> "!CLOG!"
 echo  DTC WORKSPACE: !DTC_DEL! folders removed >> "!LOGFILE!"
 echo.
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -4431,7 +4465,7 @@ if !E103_ISSUES! equ 0 (
     echo  !CWHT!Log saved to:!R! !DIM!!E103LOG!!R!
     del /f "!E103_EVTTMP!" >nul 2>&1
     echo.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 echo [!time:~0,8!] Error 103: !E103_ISSUES! issues >> "!CLOG!"
@@ -4448,7 +4482,7 @@ REM === Repair 1: ODIS lock file ===
 if !E103_LOCK! equ 1 (
     echo  !CCYN![Fix 1]!R! !CWHT!Delete ODIS lock file!R!
     echo    !DIM!!E103_LOCKFILE!!R!
-    set /p "E103_R1=  Apply fix? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "E103_R1=  Apply fix? [Y/N]: "
     if /i "!E103_R1!"=="Y" del /f "!E103_LOCKFILE!" >nul 2>&1
     if /i "!E103_R1!"=="Y" set /a E103_FIXES+=1
     if /i "!E103_R1!"=="Y" echo    !CGRN!Deleted.!R!
@@ -4462,7 +4496,7 @@ REM === Repair 2: Debugger keys ===
 if !E103_IFEO! gtr 0 (
     echo  !CCYN![Fix 2]!R! !CWHT!Remove !E103_IFEO! debugger key^(s^)!R!
     echo    !DIM!Keys blocking:!E103_IFEO_LIST!!R!
-    set /p "E103_R2=  Apply fix? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "E103_R2=  Apply fix? [Y/N]: "
 )
 set "E103_R2_APPLIED=0"
 if !E103_IFEO! gtr 0 if /i "!E103_R2!"=="Y" set "E103_R2_APPLIED=1"
@@ -4489,11 +4523,11 @@ if "!E103_SVC_STATE!" neq "4" if !E103_SVC! neq 2 set "E103_DO_R3=1"
 if !E103_DO_R3! equ 1 (
     echo  !CCYN![Fix 3]!R! !CWHT!Restart AdskAccessServiceHost service!R!
     echo    !DIM!Service is installed but not running properly.!R!
-    set /p "E103_R3=  Apply fix? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "E103_R3=  Apply fix? [Y/N]: "
 )
 if !E103_DO_R3! equ 1 if /i "!E103_R3!"=="Y" (
     net stop AdskAccessServiceHost >nul 2>&1
-    timeout /t 2 /nobreak >nul
+    call :GUI_WAIT 2 /nobreak
     net start AdskAccessServiceHost >nul 2>&1
     if !errorlevel! equ 0 echo    !CGRN!Service restarted.!R!
     if !errorlevel! neq 0 echo    !CRED!Failed to start service. May need ODIS reinstall.!R!
@@ -4512,7 +4546,7 @@ if !E103_ODIS! gtr 0 (
     echo  !CCYN![Fix 4]!R! !CWHT!Reset ODIS infrastructure!R!
     echo    !DIM!This will remove ODIS folders and run RemoveODIS.exe.!R!
     echo    !DIM!You will need to re-download Autodesk Access afterwards.!R!
-    set /p "E103_R4=  Apply fix? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "E103_R4=  Apply fix? [Y/N]: "
 )
 if !E103_ODIS! gtr 0 if /i "!E103_R4!"=="Y" (
     echo    Stopping ODIS services...
@@ -4545,7 +4579,7 @@ REM === Repair 5: ProductInformation.pit ===
 if !E103_PIT! equ 1 (
     echo  !CCYN![Fix 5]!R! !CWHT!Delete ProductInformation.pit!R!
     echo    !DIM!!E103_PITFILE!!R!
-    set /p "E103_R5=  Apply fix? [Y/N]: "
+    if not defined ADSK_GUI_MODE set /p "E103_R5=  Apply fix? [Y/N]: "
     if /i "!E103_R5!"=="Y" del /f "!E103_PITFILE!" >nul 2>&1
     if /i "!E103_R5!"=="Y" set /a E103_FIXES+=1
     if /i "!E103_R5!"=="Y" echo    !CGRN!Deleted. Will regenerate on next launch.!R!
@@ -4597,7 +4631,7 @@ if !E103_HOSTS! gtr 0 (
     echo    !DIM!This removes lines blocking Autodesk license servers.!R!
     echo    !DIM!Your other hosts entries will NOT be touched.!R!
     <nul set /p "=  Apply fix? [Y/N]: "
-    set /p "E103_R10="
+    if not defined ADSK_GUI_MODE set /p "E103_R10="
 )
 if !E103_HOSTS! gtr 0 if /i "!E103_R10!"=="Y" (
     REM Create temp hosts without Autodesk lines (preserve comments and non-Autodesk entries)
@@ -4636,7 +4670,7 @@ if !E103_REBOOT_FLAGS! equ 1 (
     echo  !CCYN![Fix]!R! !CWHT!Clear pending reboot flags!R!
     echo    !DIM!Windows Update left reboot flags that block Autodesk installers.!R!
     <nul set /p "=  Apply fix? [Y/N]: "
-    set /p "E103_RBOOT="
+    if not defined ADSK_GUI_MODE set /p "E103_RBOOT="
 )
 if !E103_REBOOT_FLAGS! equ 1 if /i "!E103_RBOOT!"=="Y" (
     reg delete "HKLM\SOFTWARE\Microsoft\Windows\CurrentVersion\WindowsUpdate\Auto Update\RebootRequired" /f >nul 2>&1
@@ -4672,7 +4706,7 @@ echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -4792,7 +4826,7 @@ echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -4844,7 +4878,7 @@ echo.
 if !BK_FOUND! equ 0 (
     echo  !CYLW!No Autodesk user data found to back up.!R!
     echo.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 
@@ -4862,13 +4896,13 @@ set "BK_DIR=!LOGDIR!\Autodesk_Backup_!BK_DATESTAMP!"
 echo  !CWHT!!BK_DIR!!R!
 echo.
 <nul set /p "=  Proceed with backup? [Y/N]: "
-set /p "BK_GO="
+if not defined ADSK_GUI_MODE set /p "BK_GO="
 
 if /i "!BK_GO!" neq "Y" (
     echo.
     echo  !DIM!Backup cancelled.!R!
     echo.
-    pause
+    call :GUI_PAUSE
     goto :main_menu
 )
 
@@ -4911,7 +4945,7 @@ echo.
 echo. >> "!CLOG!"
 echo --- End of section --- >> "!CLOG!"
 echo. >> "!CLOG!"
-pause
+call :GUI_PAUSE
 goto :main_menu
 
 REM ============================================================
@@ -5394,7 +5428,28 @@ echo  VERIFY: !RM! remaining >> "!LOGFILE!"
 echo  VERIFY: !RM! remaining >> "!DIAGFILE!"
 echo  COMPLETED %date% %time% >> "!DIAGFILE!"
 echo.
-set /p "RET=  Return to main menu? [Y/N]: "
+if not defined ADSK_GUI_MODE set /p "RET=  Return to main menu? [Y/N]: "
 if /i "!RET!"=="Y" goto :main_menu
+call :GUI_PAUSE
+exit /b 0
+
+REM ============================================================
+REM GUI HELPERS - reached only through call, never by fall-through
+REM ============================================================
+:GUI_PAUSE
+if defined ADSK_GUI_MODE exit /b 0
 pause
+exit /b 0
+
+:GUI_WAIT
+if defined ADSK_GUI_MODE (
+    set /a "GUI_WAIT_N=%~1+1"
+    ping -n !GUI_WAIT_N! 127.0.0.1 >nul 2>&1
+    exit /b 0
+)
+if /i "%~2"=="/nobreak" (
+    timeout /t %~1 /nobreak >nul 2>&1
+) else (
+    timeout /t %~1 >nul 2>&1
+)
 exit /b 0

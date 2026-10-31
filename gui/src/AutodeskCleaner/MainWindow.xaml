@@ -1,0 +1,409 @@
+<Window x:Class="AutodeskCleaner.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:loc="clr-namespace:AutodeskCleaner.Localization"
+        Title="Autodesk Cleaner"
+        Width="1380" Height="860"
+        MinWidth="1050" MinHeight="700"
+        WindowStartupLocation="CenterScreen"
+        Icon="pack://application:,,,/Assets/Autodesk.ico">
+    <Window.Resources>
+        <Style x:Key="ProductInfoPill" TargetType="Border">
+            <Setter Property="CornerRadius" Value="8" />
+            <Setter Property="Padding" Value="9,5" />
+            <Setter Property="Background" Value="{StaticResource HoverBrush}" />
+            <Style.Triggers>
+                <DataTrigger Binding="{Binding IsOrphan}" Value="True">
+                    <Setter Property="Background" Value="{StaticResource WarningSoftBrush}" />
+                </DataTrigger>
+            </Style.Triggers>
+        </Style>
+
+        <DataTemplate x:Key="ProductItemTemplate">
+            <Border Style="{StaticResource ProductRow}" Margin="0,0,0,8" Padding="12,10">
+                <Grid>
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="36" />
+                        <ColumnDefinition Width="44" />
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="110" />
+                        <ColumnDefinition Width="92" />
+                        <ColumnDefinition Width="105" />
+                        <ColumnDefinition Width="135" />
+                    </Grid.ColumnDefinitions>
+
+                    <CheckBox IsChecked="{Binding IsSelected, UpdateSourceTrigger=PropertyChanged}"
+                              Checked="ProductSelectionChanged" Unchecked="ProductSelectionChanged"
+                              VerticalAlignment="Center" HorizontalAlignment="Center"
+                              ToolTip="{Binding DisplayName}" />
+                    <Border Grid.Column="1" Width="36" Height="36" CornerRadius="11"
+                            Background="{Binding AccentHex, Converter={StaticResource HexBrush}}">
+                        <TextBlock Text="{Binding Initial}" Foreground="White" FontWeight="SemiBold"
+                                   FontSize="15" HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Grid.Column="2" Margin="10,0,8,0" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding DisplayName}" FontWeight="SemiBold"
+                                   Foreground="{StaticResource TextPrimaryBrush}" TextTrimming="CharacterEllipsis" />
+                        <TextBlock Text="{Binding Publisher}" Foreground="{StaticResource TextMutedBrush}"
+                                   FontSize="11" Margin="0,3,0,0" TextTrimming="CharacterEllipsis" />
+                    </StackPanel>
+                    <TextBlock Grid.Column="3" Text="{Binding VersionDisplay}"
+                               VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <Border Grid.Column="4" Style="{StaticResource PillBorder}" Padding="8,3"
+                            HorizontalAlignment="Left" VerticalAlignment="Center">
+                        <TextBlock Text="{Binding TypeLabel}" Foreground="{StaticResource AccentDarkBrush}"
+                                   FontSize="11" FontWeight="SemiBold" />
+                    </Border>
+                    <TextBlock Grid.Column="5" Text="{Binding SizeText}"
+                               VerticalAlignment="Center" Foreground="{StaticResource TextSecondaryBrush}" />
+                    <Border Grid.Column="6" Style="{StaticResource ProductInfoPill}"
+                            VerticalAlignment="Center" HorizontalAlignment="Left">
+                        <TextBlock Text="{Binding InfoText}" VerticalAlignment="Center"
+                                   FontSize="11" FontWeight="SemiBold">
+                            <TextBlock.Style>
+                                <Style TargetType="TextBlock">
+                                    <Setter Property="Foreground" Value="{StaticResource TextSecondaryBrush}" />
+                                    <Style.Triggers>
+                                        <DataTrigger Binding="{Binding IsOrphan}" Value="True">
+                                            <Setter Property="Foreground" Value="{StaticResource WarningBrush}" />
+                                        </DataTrigger>
+                                    </Style.Triggers>
+                                </Style>
+                            </TextBlock.Style>
+                        </TextBlock>
+                    </Border>
+                </Grid>
+            </Border>
+        </DataTemplate>
+
+        <Style x:Key="NavButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Height" Value="44" />
+            <Setter Property="Padding" Value="14,0" />
+            <Setter Property="Margin" Value="0,0,0,7" />
+            <Setter Property="Background" Value="Transparent" />
+            <Setter Property="Foreground" Value="{StaticResource SidebarTextBrush}" />
+            <Setter Property="BorderThickness" Value="0" />
+        </Style>
+
+        <Style x:Key="ToolActionButton" TargetType="Button" BasedOn="{StaticResource SecondaryButton}">
+            <Setter Property="HorizontalContentAlignment" Value="Left" />
+            <Setter Property="Padding" Value="16,12" />
+            <Setter Property="MinHeight" Value="42" />
+            <Setter Property="Margin" Value="0,0,0,8" />
+        </Style>
+    </Window.Resources>
+
+    <Grid Background="{StaticResource PageBackgroundBrush}">
+        <Grid.ColumnDefinitions>
+            <ColumnDefinition Width="250" />
+            <ColumnDefinition Width="*" />
+        </Grid.ColumnDefinitions>
+
+        <Border Grid.Column="0" Background="{StaticResource SidebarBrush}" Padding="18,20">
+            <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="Auto" />
+                    <RowDefinition Height="*" />
+                    <RowDefinition Height="Auto" />
+                </Grid.RowDefinitions>
+
+                <StackPanel Orientation="Horizontal" Margin="2,2,0,28">
+                    <Border Width="42" Height="42" CornerRadius="13" Background="#2563EB">
+                        <TextBlock Text="A" Foreground="White" FontSize="22" FontWeight="Bold"
+                                   HorizontalAlignment="Center" VerticalAlignment="Center" />
+                    </Border>
+                    <StackPanel Margin="11,0,0,0" VerticalAlignment="Center">
+                        <TextBlock Text="Autodesk Cleaner" Foreground="White" FontSize="16" FontWeight="SemiBold" />
+                        <TextBlock Text="SOFTWARE MANAGER" Foreground="{StaticResource SidebarMutedBrush}"
+                                   FontSize="9" FontWeight="SemiBold" Margin="0,3,0,0" />
+                    </StackPanel>
+                </StackPanel>
+
+                <StackPanel Grid.Row="1">
+                    <TextBlock Text="{Binding [Nav_Section], Source={x:Static loc:Loc.Instance}}"
+                               Foreground="{StaticResource SidebarMutedBrush}" Style="{StaticResource SidebarLabel}"
+                               Margin="7,0,0,11" />
+                    <Button x:Name="ProductsNavButton" Style="{StaticResource NavButton}"
+                            Click="ProductsNav_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="▦" FontSize="17" Width="28" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding [Nav_Products], Source={x:Static loc:Loc.Instance}}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                    <Button x:Name="ToolsNavButton" Style="{StaticResource NavButton}"
+                            Click="ToolsNav_Click">
+                        <StackPanel Orientation="Horizontal">
+                            <TextBlock Text="◇" FontSize="17" Width="28" VerticalAlignment="Center" />
+                            <TextBlock Text="{Binding [Nav_Tools], Source={x:Static loc:Loc.Instance}}" VerticalAlignment="Center" />
+                        </StackPanel>
+                    </Button>
+                </StackPanel>
+
+                <StackPanel Grid.Row="3">
+                    <Border CornerRadius="13" Background="{StaticResource SidebarRaisedBrush}" Padding="13" Margin="0,0,0,12">
+                        <StackPanel>
+                            <TextBlock Text="{Binding [Sidebar_Engine], Source={x:Static loc:Loc.Instance}}"
+                                       Foreground="{StaticResource SidebarMutedBrush}" Style="{StaticResource SidebarLabel}" />
+                            <StackPanel Orientation="Horizontal" Margin="0,10,0,0">
+                                <Ellipse Width="8" Height="8" Fill="#22C55E" Margin="0,0,8,0" />
+                                <TextBlock Text="{Binding [Activity_Ready], Source={x:Static loc:Loc.Instance}}"
+                                           Foreground="White" FontWeight="SemiBold" FontSize="12" />
+                            </StackPanel>
+                            <TextBlock Text="{Binding [Sidebar_EngineNote], Source={x:Static loc:Loc.Instance}}"
+                                       Foreground="{StaticResource SidebarMutedBrush}" FontSize="11"
+                                       TextWrapping="Wrap" Margin="0,8,0,0" />
+                        </StackPanel>
+                    </Border>
+                    <TextBlock x:Name="AdminStatusText" Text="{Binding [Admin_Badge], Source={x:Static loc:Loc.Instance}}"
+                               Foreground="{StaticResource SidebarMutedBrush}" FontSize="11" Margin="4,0,0,0" />
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <Grid Grid.Column="1" Margin="26,20,26,18">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="*" />
+                <RowDefinition Height="158" />
+            </Grid.RowDefinitions>
+
+            <Grid Grid.Row="0" Margin="0,0,0,18">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*" />
+                    <ColumnDefinition Width="Auto" />
+                </Grid.ColumnDefinitions>
+                <StackPanel VerticalAlignment="Center">
+                    <TextBlock x:Name="PageTitleText" Text="{Binding [Products_Title], Source={x:Static loc:Loc.Instance}}"
+                               Style="{StaticResource H1}" />
+                    <TextBlock x:Name="PageSubtitleText" Text="{Binding [Products_Subtitle], Source={x:Static loc:Loc.Instance}}"
+                               Style="{StaticResource Body}" Margin="0,5,0,0" />
+                </StackPanel>
+                <StackPanel Grid.Column="1" Orientation="Horizontal" VerticalAlignment="Center">
+                    <Button x:Name="LanguageButton" Content="EN" Style="{StaticResource SecondaryButton}"
+                            MinWidth="54" Margin="0,0,10,0" Click="Language_Click" />
+                    <Button x:Name="RescanButton" Content="{Binding [Rescan], Source={x:Static loc:Loc.Instance}}"
+                            Style="{StaticResource SecondaryButton}" MinWidth="100" Margin="0,0,9,0"
+                            Click="Rescan_Click" />
+                    <Button x:Name="UninstallSelectedButton"
+                            Content="{Binding [UninstallSelected], Source={x:Static loc:Loc.Instance}}"
+                            Style="{StaticResource PrimaryButton}" MinWidth="150"
+                            Click="UninstallSelected_Click" />
+                </StackPanel>
+            </Grid>
+
+            <Grid Grid.Row="1">
+                <Grid x:Name="ProductsPage">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="94" />
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <UniformGrid Grid.Row="0" Columns="4" Margin="0,0,0,16">
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="{Binding [Card_Products], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" />
+                                <TextBlock x:Name="ProductsCountText" Text="0" FontSize="24" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,3,0,0" />
+                                <TextBlock Text="{Binding [Card_Products_Sub], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Muted}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="{Binding [Card_Size], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" />
+                                <TextBlock x:Name="TotalSizeText" Text="0 MB" FontSize="24" FontWeight="SemiBold"
+                                           Foreground="{StaticResource TextPrimaryBrush}" Margin="0,3,0,0" />
+                                <TextBlock Text="{Binding [Card_Size_Sub], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Muted}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="{Binding [Card_Status], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" />
+                                <TextBlock x:Name="RemnantsText" Text="0" FontSize="24" FontWeight="SemiBold"
+                                           Foreground="{StaticResource WarningBrush}" Margin="0,3,0,0" />
+                                <TextBlock Text="{Binding [Info_Orphan], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Muted}" />
+                            </StackPanel>
+                        </Border>
+                        <Border Style="{StaticResource CardBorder}" Padding="16">
+                            <StackPanel>
+                                <TextBlock Text="{Binding [Card_LastScan], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" />
+                                <TextBlock x:Name="LastScanText" Text="{Binding [LastScan_Never], Source={x:Static loc:Loc.Instance}}"
+                                           FontSize="17" FontWeight="SemiBold" Foreground="{StaticResource TextPrimaryBrush}" Margin="0,7,0,0" />
+                                <TextBlock Text="{Binding [Card_Products_Sub], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Muted}" />
+                            </StackPanel>
+                        </Border>
+                    </UniformGrid>
+
+                    <Grid Grid.Row="1" Margin="0,0,0,11">
+                        <Grid.ColumnDefinitions>
+                            <ColumnDefinition Width="*" />
+                            <ColumnDefinition Width="190" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                            <ColumnDefinition Width="Auto" />
+                        </Grid.ColumnDefinitions>
+                        <TextBox x:Name="SearchBox" Height="40" Padding="13,8" FontSize="13"
+                                 VerticalContentAlignment="Center" ToolTip="{Binding [Search_Placeholder], Source={x:Static loc:Loc.Instance}}"
+                                 TextChanged="SearchBox_TextChanged" BorderBrush="{StaticResource BorderStrongBrush}"
+                                 BorderThickness="1" Background="White" />
+                        <ComboBox x:Name="FilterBox" Grid.Column="1" Height="40" Margin="10,0,0,0"
+                                  VerticalContentAlignment="Center" SelectionChanged="FilterBox_SelectionChanged">
+                            <ComboBoxItem Content="{Binding [Filter_All], Source={x:Static loc:Loc.Instance}}" IsSelected="True" />
+                            <ComboBoxItem Content="{Binding [Filter_Attention], Source={x:Static loc:Loc.Instance}}" />
+                            <ComboBoxItem Content="ODIS" />
+                            <ComboBoxItem Content="MSI" />
+                        </ComboBox>
+                        <Button x:Name="SelectAllButton" Grid.Column="2"
+                                Content="{Binding [SelectAll], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource SecondaryButton}" MinWidth="110" Margin="10,0,0,0"
+                                Click="SelectAll_Click" />
+                        <Button x:Name="FullCleanButton" Grid.Column="3"
+                                Content="{Binding [FullClean], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource DangerButton}" MinWidth="125" Margin="10,0,0,0"
+                                Click="FullClean_Click" />
+                        <Button x:Name="DeepCleanButton" Grid.Column="4"
+                                Content="{Binding [DeepClean], Source={x:Static loc:Loc.Instance}}"
+                                Style="{StaticResource SecondaryButton}" MinWidth="115" Margin="10,0,0,0"
+                                Click="DeepClean_Click" />
+                    </Grid>
+
+                    <Border Grid.Row="2" Style="{StaticResource CardBorder}" Padding="12,12,12,8">
+                        <Grid>
+                            <Grid.RowDefinitions>
+                                <RowDefinition Height="34" />
+                                <RowDefinition Height="*" />
+                                <RowDefinition Height="Auto" />
+                            </Grid.RowDefinitions>
+                            <Grid Margin="7,0,7,8">
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="36" />
+                                    <ColumnDefinition Width="44" />
+                                    <ColumnDefinition Width="*" />
+                                    <ColumnDefinition Width="110" />
+                                    <ColumnDefinition Width="92" />
+                                    <ColumnDefinition Width="105" />
+                                    <ColumnDefinition Width="135" />
+                                </Grid.ColumnDefinitions>
+                                <TextBlock Grid.Column="2" Text="{Binding [Grid_Product], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="3" Text="{Binding [Grid_Version], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="4" Text="{Binding [Grid_Type], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="5" Text="{Binding [Grid_Size], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                                <TextBlock Grid.Column="6" Text="{Binding [Grid_Info], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Label}" VerticalAlignment="Center" />
+                            </Grid>
+                            <ScrollViewer Grid.Row="1" VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled">
+                                <ItemsControl x:Name="ProductItems" ItemsSource="{Binding ProductsView}"
+                                              ItemTemplate="{StaticResource ProductItemTemplate}" />
+                            </ScrollViewer>
+                            <StackPanel x:Name="EmptyState" Grid.Row="1" VerticalAlignment="Center"
+                                        HorizontalAlignment="Center" Visibility="Collapsed">
+                                <Border Width="54" Height="54" CornerRadius="18" Background="{StaticResource AccentSoftBrush}"
+                                        HorizontalAlignment="Center">
+                                    <TextBlock Text="✓" Foreground="{StaticResource AccentBrush}" FontSize="25"
+                                               HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                </Border>
+                                <TextBlock x:Name="EmptyTitleText" Text="{Binding [Empty_Title], Source={x:Static loc:Loc.Instance}}"
+                                           Style="{StaticResource H2}" HorizontalAlignment="Center" Margin="0,14,0,0" />
+                                <TextBlock x:Name="EmptyBodyText" Text="{Binding [Empty_Body], Source={x:Static loc:Loc.Instance}}"
+                                           Style="{StaticResource Body}" Margin="0,7,0,0" Width="450"
+                                           TextAlignment="Center" />
+                                <Button Content="{Binding [Empty_Action], Source={x:Static loc:Loc.Instance}}"
+                                        Style="{StaticResource PrimaryButton}" Margin="0,16,0,0"
+                                        HorizontalAlignment="Center" Click="DeepClean_Click" />
+                            </StackPanel>
+                            <DockPanel Grid.Row="2" Margin="5,8,5,0">
+                                <TextBlock x:Name="SelectedCountText" Text="0 selected"
+                                           Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
+                                <TextBlock x:Name="FilteredCountText" DockPanel.Dock="Right" Text="0"
+                                           Foreground="{StaticResource TextMutedBrush}" FontSize="11" />
+                            </DockPanel>
+                        </Grid>
+                    </Border>
+                </Grid>
+
+                <ScrollViewer x:Name="ToolsPage" Visibility="Collapsed" VerticalScrollBarVisibility="Auto">
+                    <StackPanel>
+                        <Border Style="{StaticResource CardBorder}" Padding="20" Margin="0,0,0,14">
+                            <StackPanel>
+                                <TextBlock Text="{Binding [Tools_Title], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource H2}" />
+                                <TextBlock Text="{Binding [Tools_Subtitle], Source={x:Static loc:Loc.Instance}}"
+                                           Style="{StaticResource Body}" Margin="0,6,0,17" />
+                                <WrapPanel>
+                                    <Button Content="{Binding [Tool_Audit_Title], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource PrimaryButton}" Margin="0,0,9,9" Click="Audit_Click" />
+                                    <Button Content="{Binding [Verify], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,9,9" Click="Verify_Click" />
+                                    <Button Content="{Binding [Tool_Remnants_Title], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,9,9" Click="Remnants_Click" />
+                                    <Button Content="{Binding [Tool_Restore_Title], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource SecondaryButton}" Margin="0,0,9,9" Click="Restore_Click" />
+                                </WrapPanel>
+                            </StackPanel>
+                        </Border>
+                        <UniformGrid Columns="2">
+                            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Tool_Error103_Title], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource H3}" />
+                                    <TextBlock Text="{Binding [Tool_Error103_Desc], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Body}" Margin="0,6,0,12" />
+                                    <Button Content="{Binding [Tool_Run], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource ToolActionButton}" Click="Error103_Click" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,10">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Tool_Reboot_Title], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource H3}" />
+                                    <TextBlock Text="{Binding [Tool_Reboot_Desc], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Body}" Margin="0,6,0,12" />
+                                    <Button Content="{Binding [Tool_Run], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource ToolActionButton}" Click="Reboot_Click" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardBorder}" Margin="0,0,10,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Tool_Backup_Title], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource H3}" />
+                                    <TextBlock Text="{Binding [Tool_Backup_Desc], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Body}" Margin="0,6,0,12" />
+                                    <Button Content="{Binding [Tool_Run], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource ToolActionButton}" Click="Backup_Click" />
+                                </StackPanel>
+                            </Border>
+                            <Border Style="{StaticResource CardBorder}" Margin="0,0,0,0">
+                                <StackPanel>
+                                    <TextBlock Text="{Binding [Tool_Logs_Title], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource H3}" />
+                                    <TextBlock Text="{Binding [Tool_Logs_Desc], Source={x:Static loc:Loc.Instance}}" Style="{StaticResource Body}" Margin="0,6,0,12" />
+                                    <Button Content="{Binding [Tool_Open], Source={x:Static loc:Loc.Instance}}"
+                                            Style="{StaticResource ToolActionButton}" Click="OpenLogs_Click" />
+                                </StackPanel>
+                            </Border>
+                        </UniformGrid>
+                    </StackPanel>
+                </ScrollViewer>
+            </Grid>
+
+            <Border Grid.Row="2" Style="{StaticResource CardBorder}" Margin="0,14,0,0" Padding="0">
+                <Grid>
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+                    <Border Background="{StaticResource LogBackgroundBrush}" CornerRadius="13,13,0,0" Padding="13,9">
+                        <DockPanel>
+                            <TextBlock Text="{Binding [Activity_Log], Source={x:Static loc:Loc.Instance}}"
+                                       Foreground="White" FontWeight="SemiBold" />
+                            <Button x:Name="StopButton" Content="{Binding [Activity_Stop], Source={x:Static loc:Loc.Instance}}"
+                                    DockPanel.Dock="Right" Style="{StaticResource SecondaryButton}" Padding="11,3"
+                                    Visibility="Collapsed" Click="Stop_Click" />
+                            <TextBlock x:Name="ActionStatusText" DockPanel.Dock="Right" Text="{Binding [Activity_Idle], Source={x:Static loc:Loc.Instance}}"
+                                       Foreground="{StaticResource LogTextBrush}" Margin="0,0,12,0" VerticalAlignment="Center" />
+                        </DockPanel>
+                    </Border>
+                    <ScrollViewer x:Name="LogScrollViewer" Grid.Row="1" Background="{StaticResource LogBackgroundBrush}"
+                                  VerticalScrollBarVisibility="Auto">
+                        <TextBlock x:Name="LogTextBox" Text="{Binding [Activity_Ready], Source={x:Static loc:Loc.Instance}}"
+                                   Foreground="{StaticResource LogTextBrush}" Margin="13,8"
+                                   TextWrapping="Wrap" FontFamily="Consolas" FontSize="11" />
+                    </ScrollViewer>
+                </Grid>
+            </Border>
+        </Grid>
+    </Grid>
+</Window>
